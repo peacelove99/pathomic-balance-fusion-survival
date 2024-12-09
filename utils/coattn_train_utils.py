@@ -10,7 +10,7 @@ from lifelines.utils import concordance_index
 from sksurv.metrics import concordance_index_censored
 
 
-def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, writer=None, loss_fn=None, reg_fn=None, lambda_reg=0., gc=16):   
+def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, writer=None, loss_fn=None, reg_fn=None, lambda_reg=0., gc=16):
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     model.train()
     train_loss_surv, train_loss = 0., 0.
@@ -20,7 +20,8 @@ def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, write
     all_censorships = np.zeros((len(loader)))
     all_event_times = np.zeros((len(loader)))
     
-    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c) in enumerate(loader):
+    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c, slide_name) in enumerate(loader):
+        # print('slide_name:',slide_name)  # debug slide_name
 
         data_WSI = data_WSI.to(device)
         data_omic1 = data_omic1.type(torch.FloatTensor).to(device)
@@ -81,8 +82,8 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
     slide_ids = loader.dataset.slide_data['slide_id']
     patient_results = {}
 
-    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c) in enumerate(loader):
-
+    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c, slide_name) in enumerate(loader):
+        # print('slide_name:',slide_name)  # debug slide_name
         data_WSI = data_WSI.to(device)
         data_omic1 = data_omic1.type(torch.FloatTensor).to(device)
         data_omic2 = data_omic2.type(torch.FloatTensor).to(device)

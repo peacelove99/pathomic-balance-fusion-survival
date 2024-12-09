@@ -40,7 +40,54 @@ class Generic_WSI_Survival_Dataset(Dataset):
         missing_slides_ls = ['TCGA-A7-A6VX-01Z-00-DX2.9EE94B59-6A2C-4507-AA4F-DC6402F2B74F.svs',
                              'TCGA-A7-A0CD-01Z-00-DX2.609CED8D-5947-4753-A75B-73A8343B47EC.svs',
                              'TCGA-HT-7483-01Z-00-DX1.7241DF0C-1881-4366-8DD9-11BF8BDD6FBF.svs',
-                             'TCGA-06-0882-01Z-00-DX2.7ad706e3-002e-4e29-88a9-18953ba422bf.svs']
+                             'TCGA-06-0882-01Z-00-DX2.7ad706e3-002e-4e29-88a9-18953ba422bf.svs',
+                             # TCGA-LUAD
+                             'TCGA-49-4505-01Z-00-DX4.623c4278-fc3e-4c80-bb4d-000e24fbb1c2.svs', # [77775, 1024]
+                             'TCGA-49-4505-01Z-00-DX3.d3f8d0c4-e4bc-4201-9b2f-e010f51dd8c3.svs', # [61419, 1024]
+                             'TCGA-49-4506-01Z-00-DX4.9460a2c1-efe2-4095-9b0e-dfe0eda684ba.svs', # [87632, 1024]
+                             'TCGA-49-4506-01Z-00-DX3.a05a3969-bbef-48d8-86de-f51c8870afd6.svs', # [65332, 1024]
+                             'TCGA-49-6745-01Z-00-DX7.4bdde497-03d9-4e15-a00e-595baa3947b5.svs', # [191335, 1024]
+                             'TCGA-49-6745-01Z-00-DX6.3174fffa-c17c-44d1-8d21-1921a9ec1bee.svs', # [170859, 1024]
+                             'TCGA-49-6745-01Z-00-DX5.9521a16f-d6a7-460c-b75c-7341d72ce727.svs', # [153881, 1024]
+                             'TCGA-49-6745-01Z-00-DX4.48b4bbb5-4214-4bfb-91e8-bddfa2f03c92.svs', # [131939, 1024]
+                             'TCGA-49-6745-01Z-00-DX3.40cd3c60-889c-4eaa-be55-36ab5d8b2400.svs', # [91800, 1024]
+                             'TCGA-49-6745-01Z-00-DX2.3b8e947b-885e-486f-9edc-f2b247bdf95b.svs', # [57759, 1024]
+                             'TCGA-49-4488-01Z-00-DX9.bf1e9d28-3ca2-4a62-bf3e-3e735c6a2885.svs', # [167497, 1024]
+                             'TCGA-49-4488-01Z-00-DX8.b9fb358a-9618-4956-9544-c2ffe2678095.svs', # [146438, 1024]
+                             'TCGA-49-4488-01Z-00-DX7.a04b36c3-9cfd-4195-92c0-70046cd49d9a.svs', # [124001, 1024]
+                             'TCGA-49-4488-01Z-00-DX6.3ce306b2-1b00-48f7-8288-c24069037a9c.svs', # [115154, 1024]
+                             'TCGA-49-4488-01Z-00-DX5.6380c697-c81b-48c8-863c-ea1cdd097464.svs', # [106087, 1024]
+                             'TCGA-49-4488-01Z-00-DX4.17c00349-5908-4944-9dba-5efea9a5373a.svs', # [86268, 1024]
+                             'TCGA-49-4488-01Z-00-DX3.341ea7ac-ee5f-4ad2-9d01-d81a4d2e9b13.svs', # [70964, 1024]
+                             'TCGA-49-4490-01Z-00-DX6.0a04ad8e-7f33-4496-bd9e-0110ec33f887.svs', # [119750, 1024]
+                             'TCGA-49-4490-01Z-00-DX5.feea87ff-61c6-465e-8b36-4803f6af3d62.svs', # [90674, 1024]
+                             'TCGA-49-4490-01Z-00-DX4.4e94aeb6-f616-4bdd-82bc-2ca2f2b5a5c4.svs', # [70737, 1024]
+                             'TCGA-49-4490-01Z-00-DX3.0949a10a-0a1f-49dc-9296-ab4d4f0bf988.svs', # [52322, 1024]
+                             'TCGA-49-4501-01Z-00-DX3.b6c2cc84-1c94-4816-92e7-8cf4446ac9ac.svs', # [73729, 1024]
+                             'TCGA-49-4501-01Z-00-DX2.07b7723d-136b-490c-9dd3-7f3aef78d3d9.svs', # [55763, 1024]
+                             'TCGA-49-4514-01Z-00-DX4.79e9e14e-72ea-4e9f-9719-d1a791cf0b43.svs', # [65936, 1024]
+                             'TCGA-49-4494-01Z-00-DX7.9f722476-622e-4374-9fda-ef35184f01e0.svs', # [145832, 1024]
+                             'TCGA-49-4494-01Z-00-DX6.3791a027-7ddb-429c-99a5-bb84a4307550.svs', # [125025, 1024]
+                             'TCGA-49-4494-01Z-00-DX5.1e9e22d6-a4c9-40d1-aedb-b6cd404fe16f.svs', # [110212, 1024]
+                             'TCGA-49-4494-01Z-00-DX4.4c6a4560-adee-4fc9-8fd8-feb7f89e51e3.svs', # [90559, 1024]
+                             'TCGA-49-4494-01Z-00-DX3.e80b4534-4d6e-4d79-962e-017ffee24d67.svs', # [69059, 1024]
+                             'TCGA-49-4494-01Z-00-DX2.cac5ed0a-98c3-4d37-a4f4-9596a061836a.svs', # [52863, 1024]
+                             'TCGA-50-5068-01Z-00-DX2.0492A5C6-09CB-424B-BE20-10A1CBEA2E57.svs', # [51576, 1024]
+                             'TCGA-49-4512-01Z-00-DX8.c54237a3-93f4-432f-90f1-b930b7341741.svs', # [164110, 1024]
+                             'TCGA-49-4512-01Z-00-DX7.1f758560-85e2-4cf9-a81a-317536d96bcc.svs', # [148722, 1024]
+                             'TCGA-49-4512-01Z-00-DX6.985c9088-ff83-4f13-8a95-cb55aa48682b.svs', # [132007, 1024]
+                             'TCGA-49-4512-01Z-00-DX5.7198ce36-1fae-4da1-9f26-b7f43cf01133.svs', # [111569, 1024]
+                             'TCGA-49-4512-01Z-00-DX4.5161fcf5-62a3-4f7d-8a55-9a24a7d70efb.svs', # [80672, 1024]
+                             'TCGA-49-4512-01Z-00-DX3.2f6ec7bc-0dac-4be0-95fe-4071a93a856f.svs', # [62186, 1024]
+                             'TCGA-49-6744-01Z-00-DX4.a3d7995d-399f-4c53-aab8-adc4ea4dbfa8.svs', # [107325, 1024]
+                             'TCGA-49-6744-01Z-00-DX3.fa64d744-6caa-4f62-8689-33da9c312838.svs', # [87156, 1024]
+                             'TCGA-49-6742-01Z-00-DX5.74539ee6-0ac6-4663-89f1-c6a74a59a4cb.svs', # [155787, 1024]
+                             'TCGA-49-6742-01Z-00-DX4.a11201e1-9eeb-40ea-9c88-28de847ef7d8.svs', # [122612, 1024]
+                             'TCGA-49-6742-01Z-00-DX3.789aa445-e63f-4e6e-900a-0f47f44af6b7.svs', # [89779, 1024]
+                             'TCGA-49-6742-01Z-00-DX2.2c6b4df0-867d-40c5-8bee-14e2d219224b.svs', # [61791, 1024]
+                             'TCGA-49-6743-01Z-00-DX4.5ea81023-1372-48ed-88a8-374e2394d7f7.svs', # [95344, 1024]
+                             'TCGA-49-6743-01Z-00-DX3.d391f3ab-e954-4f4f-996d-cd0420933ccf.svs', # [82289, 1024]
+                             ]
         slide_data.drop(slide_data[slide_data['slide_id'].isin(missing_slides_ls)].index, inplace=True)
 
         # slide_data = slide_data.drop(['Unnamed: 0'], axis=1)
@@ -290,7 +337,7 @@ class Generic_MIL_Survival_Dataset(Generic_WSI_Survival_Dataset):
                     omic4 = torch.tensor(self.genomic_features[self.omic_names[3]].iloc[idx].values)
                     omic5 = torch.tensor(self.genomic_features[self.omic_names[4]].iloc[idx].values)
                     omic6 = torch.tensor(self.genomic_features[self.omic_names[5]].iloc[idx].values)
-                    return (path_features, omic1, omic2, omic3, omic4, omic5, omic6, label, event_time, c)
+                    return (path_features, omic1, omic2, omic3, omic4, omic5, omic6, label, event_time, c, slide_id)
                 else:
                     raise NotImplementedError('Mode [%s] not implemented.' % self.mode)
                 ### <--

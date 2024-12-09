@@ -167,7 +167,8 @@ def collate_MIL_survival_sig(batch):
     label = torch.LongTensor([item[7] for item in batch])
     event_time = np.array([item[8] for item in batch])
     c = torch.FloatTensor([item[9] for item in batch])
-    return [img, omic1, omic2, omic3, omic4, omic5, omic6, label, event_time, c]
+    slide_name = [item[10] for item in batch]
+    return [img, omic1, omic2, omic3, omic4, omic5, omic6, label, event_time, c, slide_name]
 
 
 def make_weights_for_balanced_classes_split(dataset):
