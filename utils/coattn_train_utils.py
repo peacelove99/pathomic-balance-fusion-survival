@@ -70,13 +70,16 @@ def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, write
         writer.add_scalar('train/c_index', c_index, epoch)
 
 
-def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stopping=None, monitor_cindex=None, writer=None, loss_fn=None, reg_fn=None, lambda_reg=0., results_dir=None):
+def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stopping=None, monitor_cindex=None, writer=None, loss_fn=None, reg_fn=None, lambda_reg=0., results_dir=None, args=None):
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     val_loss_surv, val_loss = 0., 0.
     all_risk_scores = np.zeros((len(loader)))
     all_censorships = np.zeros((len(loader)))
     all_event_times = np.zeros((len(loader)))
+
+    slide_ids = loader.dataset.slide_data['slide_id']
+    patient_results = {}
 
     for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c) in enumerate(loader):
 
@@ -90,6 +93,8 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
         label = label.type(torch.LongTensor).to(device)
         c = c.type(torch.FloatTensor).to(device)
 
+        slide_id = slide_ids.iloc[batch_idx]
+
         with torch.no_grad():
             hazards, S, Y_hat, A = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6) # return hazards, S, Y_hat, A_raw, results_dict
 
@@ -101,10 +106,12 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
         else:
             loss_reg = reg_fn(model) * lambda_reg
 
-        risk = -torch.sum(S, dim=1).cpu().numpy()
-        all_risk_scores[batch_idx] = risk
-        all_censorships[batch_idx] = c.cpu().numpy()
-        all_event_times[batch_idx] = event_time
+        risk = -torch.sum(S, dim=1).cpu().numpy()  # 计算风险分数
+        all_risk_scores[batch_idx] = risk  # 存储风险分数
+        all_censorships[batch_idx] = c.cpu().numpy()  # 存储审查状态
+        all_event_times[batch_idx] = event_time  # 存储事件时间
+        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'risk': risk, 'disc_label': label.item(),
+                                           'survival': event_time.item(), 'censorship': c.item()}})
 
         val_loss_surv += loss_value
         val_loss += loss_value + loss_reg
@@ -113,6 +120,11 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
     val_loss_surv /= len(loader)
     val_loss /= len(loader)
     c_index = concordance_index_censored((1-all_censorships).astype(bool), all_event_times, all_risk_scores, tied_tol=1e-08)[0]
+
+    val_epoch_str = "val c-index: {:.4f}".format(c_index)
+    print(val_epoch_str)
+    with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
+        f.write(val_epoch_str + '\n')
 
     if writer:
         writer.add_scalar('val/loss_surv', val_loss_surv, epoch)
@@ -127,7 +139,7 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
             print("Early stopping")
             return True
 
-    return False
+    return patient_results, c_index, False
 
 
 def summary_survival_coattn(model, loader, n_classes):

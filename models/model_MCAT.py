@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models.model_utils import *
+from torch_geometric.nn import GlobalAttention
 
 
 ###########################
@@ -16,7 +17,8 @@ from models.model_utils import *
 ###########################
 class MCAT_Surv(nn.Module):
     def __init__(self, fusion='concat', omic_sizes=[100, 200, 300, 400, 500, 600], n_classes=4,
-                 model_size_wsi: str = 'small', model_size_omic: str = 'small', dropout=0.25):
+                 model_size_wsi: str = 'small', model_size_omic: str = 'small', dropout=0.25,
+                 dim_in=1024, dim_hidden=256, topk=6):
         super(MCAT_Surv, self).__init__()
         self.fusion = fusion
         self.omic_sizes = omic_sizes
@@ -29,6 +31,19 @@ class MCAT_Surv(nn.Module):
         fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
         fc.append(nn.Dropout(0.25))
         self.wsi_net = nn.Sequential(*fc)
+
+        ### construct graph WiKG
+        self._fc1 = nn.Sequential(nn.Linear(dim_in, dim_hidden), nn.LeakyReLU())
+        self.W_head = nn.Linear(dim_hidden, dim_hidden)
+        self.W_tail = nn.Linear(dim_hidden, dim_hidden)
+        self.scale = dim_hidden ** -0.5
+        self.topk = topk
+        self.linear1 = nn.Linear(dim_hidden, dim_hidden)
+        self.linear2 = nn.Linear(dim_hidden, dim_hidden)
+        self.activation = nn.LeakyReLU()
+        self.message_dropout = nn.Dropout(dropout)
+        att_net = nn.Sequential(nn.Linear(dim_hidden, dim_hidden // 2), nn.LeakyReLU(), nn.Linear(dim_hidden // 2, 1))
+        self.readout = GlobalAttention(att_net)
 
         ### Constructing Genomic SNN
         hidden = self.size_dict_omic[model_size_omic]
@@ -73,8 +88,7 @@ class MCAT_Surv(nn.Module):
         x_omic = [kwargs['x_omic%d' % i] for i in range(1, 7)]
 
         h_path_bag = self.wsi_net(x_path).unsqueeze(1)  ### path embeddings are fed through a FC layer
-        h_omic = [self.sig_networks[idx].forward(sig_feat) for idx, sig_feat in
-                  enumerate(x_omic)]  ### each omic signature goes through it's own FC layer
+        h_omic = [self.sig_networks[idx].forward(sig_feat) for idx, sig_feat in enumerate(x_omic)]  ### each omic signature goes through it's own FC layer
         h_omic_bag = torch.stack(h_omic).unsqueeze(1)  ### omic embeddings are stacked (to be used in co-attention)
 
         # Coattn

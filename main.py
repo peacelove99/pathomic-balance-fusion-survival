@@ -66,6 +66,36 @@ def parse():
     parser.add_argument('--fusion', type=str, choices=['None', 'concat', 'bilinear'],
                         default='concat', help='Type of fusion. (Default: concat).')
 
+    parser.add_argument('--opt', type=str, choices=['adam', 'sgd'],
+                        default='adam')
+
+    parser.add_argument('--lr', type=float,
+                        default=2e-4, help='Learning rate (default: 0.0001)')
+
+    parser.add_argument('--reg', type=float,
+                        default=1e-5, help='L2-regularization weight decay (default: 1e-5)')
+
+    parser.add_argument('--weighted_sample', action='store_true',
+                        default=True, help='Enable weighted sampling')
+
+    parser.add_argument('--batch_size', type=int,
+                        default=1, help='Batch Size (Default: 1, due to varying bag sizes)')
+
+    parser.add_argument('--early_stopping', action='store_true',
+                        default=False, help='Enable early stopping')
+
+    parser.add_argument('--start_epoch', type=int,
+                        default=0, help='start_epoch.')
+
+    parser.add_argument('--max_epochs', type=int,
+                        default=50, help='Maximum number of epochs to train (default: 20)')
+
+    parser.add_argument('--lambda_reg', type=float,
+                        default=1e-4, help='L1-Regularization Strength (Default 1e-4)')
+
+    parser.add_argument('--gc', type=int,
+                        default=32, help='Gradient Accumulation Step.')
+
     return parser.parse_args()
 
 
@@ -83,6 +113,15 @@ def seed_torch(seed=7):
 
 
 def main(args):
+    print("################# Settings ###################")
+
+    # print(args)
+    for attr, value in vars(args).items():
+        print(f"{attr.replace('_', ' ').capitalize()}: {value}")
+
+    print('Done!\n')
+    ########################################################################################################################
+
     if args.k_start == -1:
         s_fold = 0
     else:
@@ -95,14 +134,15 @@ def main(args):
 
     latest_val_cindex = []  # 存每一折的 cindex
     folds = np.arange(s_fold, e_fold)
+    summary_all_folds = {}
     print("开始{}折交叉验证".format(folds[-1]))
     for i in folds:
         print("################# Training {} fold ###################".format(i))
         start_time = timer()  # 计时开始
 
         seed_torch(args.seed)  # 设置随机种子
-        results_pkl_path = os.path.join(args.results_dir, 'split_latest_val_{}_results.pkl'.format(i))  # 保存第 i 折结果的地址
-        if os.path.isfile(results_pkl_path):  # 第 i 折结果存在 则跳过
+        args.results_pkl_path = os.path.join(args.results_dir, 'split_latest_val_{}_results.pkl'.format(i))  # 保存第 i 折结果的地址
+        if os.path.isfile(args.results_pkl_path):  # 第 i 折结果存在 则跳过
             print("Skipping Split %d" % i)
             continue
         print('\n加载数据')
@@ -129,16 +169,29 @@ def main(args):
         args.omic_sizes = train_dataset.omic_sizes
         print('Genomic Dimensions', args.omic_sizes)
 
-        val_latest, cindex_latest = train(datasets, i, args)
-        latest_val_cindex.append(cindex_latest)  # 保存第 i 折cindex
-        save_pkl(results_pkl_path, val_latest)  # 保存第 i 折val_latest
+        # val_latest, cindex_latest = train(datasets, i, args)
+        summary_results, print_results = train(datasets, i, args)
+
+        # latest_val_cindex.append(cindex_latest)  # 保存第 i 折cindex
+        save_pkl(args.results_pkl_path, summary_results)  # 保存第 i 折val_latest
+        summary_all_folds[i] = print_results
 
         end_time = timer()  # 计时结束
         print('Fold %d Time: %f seconds' % (i, end_time - start_time))
 
+    print('=============================== summary ===============================')
+    result_cindex = []
+    for i, k in enumerate(summary_all_folds):
+        c_index = summary_all_folds[k]['result'][0]
+        print("Fold {}, C-Index: {:.4f}".format(k, c_index))
+        result_cindex.append(c_index)
+    result_cindex = np.array(result_cindex)
+    print("Avg C-Index of {} folds: {:.3f}, stdp: {:.3f}, stds: {:.3f}".format(
+        len(summary_all_folds), result_cindex.mean(), result_cindex.std(), result_cindex.std(ddof=1)))
+
     # results_latest_df = pd.DataFrame({'folds': folds, 'val_cindex': latest_val_cindex})
     # save_name = 'summary.csv'
-
+    #
     # results_latest_df.to_csv(os.path.join(args.results_dir, 'summary_latest.csv'))
 
 
@@ -146,10 +199,6 @@ if __name__ == "__main__":
     start = timer()
 
     args = parse()
-
-    seed_torch(args.seed)  # 设置随机种子
-    print("设置随机种子:", args.seed)
-    encoding_size = 1024
 ########################################################################################################################
     if not os.path.isdir(args.results_dir):
         os.mkdir(args.results_dir)
@@ -169,14 +218,6 @@ if __name__ == "__main__":
 
     args.split_dir = os.path.join('./splits', args.which_splits, args.task)
     print("数据分割目录:", args.split_dir)
-########################################################################################################################
-    print("################# Settings ###################")
-
-    # print(args)
-    for attr, value in vars(args).items():
-        print(f"{attr.replace('_', ' ').capitalize()}: {value}")
-
-    print('Done!\n')
 ########################################################################################################################
 
     main(args)

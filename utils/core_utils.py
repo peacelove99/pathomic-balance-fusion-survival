@@ -10,20 +10,21 @@ def train(datasets: tuple, cur: int, args: Namespace):
     """
         train for a single fold
     """
-    ########################################################################################################################
     print('\nTraining Fold {}!'.format(cur))
-
-    writer_dir = os.path.join(args.results_dir, str(cur))
-    if not os.path.isdir(writer_dir):
-        os.mkdir(writer_dir)
-
+    ####################################################################################################################
+    # 创建一折结果目录 writer_dir = args.results_dir/str(cur) eg. /results/5foldcv/mcat_coattn/tcga_luad_s1/0
+    args.writer_dir = os.path.join(args.results_dir, str(cur))
+    if not os.path.isdir(args.writer_dir):
+        os.mkdir(args.writer_dir)
+    # 每15秒将缓存的数据刷新到磁盘。
     if args.log_data:
         from tensorboardX import SummaryWriter
-        writer = SummaryWriter(writer_dir, flush_secs=15)
+        writer = SummaryWriter(args.writer_dir, flush_secs=15)
     else:
         writer = None
-
+    ####################################################################################################################
     print('\nInit train/val/test splits...', end=' ')
+
     train_split, val_split = datasets
     save_splits(datasets, ['train', 'val'], os.path.join(args.results_dir, 'splits_{}.csv'.format(cur)))
     print("Training on {} samples".format(len(train_split)))
@@ -80,9 +81,8 @@ def train(datasets: tuple, cur: int, args: Namespace):
     ########################################################################################################################
     print('\nInit Loaders...', end=' ')
 
-    train_loader = get_split_loader(train_split, training=True, testing=args.testing, weighted=args.weighted_sample,
-                                    mode=args.mode, batch_size=args.batch_size)
-    val_loader = get_split_loader(val_split, testing=args.testing, mode=args.mode, batch_size=args.batch_size)
+    train_loader = get_split_loader(train_split, training=True, testing=False, weighted=args.weighted_sample, mode=args.mode, batch_size=args.batch_size)
+    val_loader = get_split_loader(val_split, testing=False, mode=args.mode, batch_size=args.batch_size)
 
     print('Done!')
     ########################################################################################################################
@@ -109,11 +109,22 @@ def train(datasets: tuple, cur: int, args: Namespace):
 
     for epoch in range(args.start_epoch, args.max_epochs):
         train_loop_survival_coattn(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, reg_fn, args.lambda_reg, args.gc)
-        validate_survival_coattn(cur, epoch, model, val_loader, args.n_classes, early_stopping, monitor_cindex, writer, loss_fn, reg_fn, args.lambda_reg, args.results_dir)
+        val_latest, c_index_val, stop = validate_survival_coattn(cur, epoch, model, val_loader, args.n_classes, early_stopping, monitor_cindex, writer, loss_fn, reg_fn, args.lambda_reg, args.results_dir, args)
 
-    torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
-    model.load_state_dict(torch.load(os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur))))
-    results_val_dict, val_cindex = summary_survival(model, val_loader, args.n_classes)
-    print('Val c-Index: {:.4f}'.format(val_cindex))
-    writer.close()
-    return results_val_dict, val_cindex
+    if c_index_val > max_c_index:
+        max_c_index = c_index_val
+        epoch_max_c_index = epoch
+        save_name = 's_{}_checkpoint'.format(cur)
+
+        torch.save(model.state_dict(), os.path.join(args.results_dir, save_name + ".pt".format(cur)))
+        best_val_dict = val_latest
+
+    if args.log_data:
+        writer.close()
+    print("================= summary of fold {} ====================".format(cur))
+    print_results = {'result': (max_c_index, epoch_max_c_index)}
+    print("result: {:.4f}".format(max_c_index))
+    with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
+        f.write('result: {:.4f}, epoch: {}\n'.format(max_c_index, epoch_max_c_index))
+
+    return best_val_dict, print_results
