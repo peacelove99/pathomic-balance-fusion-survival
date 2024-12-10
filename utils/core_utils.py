@@ -111,13 +111,13 @@ def train(datasets: tuple, cur: int, args: Namespace):
         train_loop_survival_coattn(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, reg_fn, args.lambda_reg, args.gc)
         val_latest, c_index_val, stop = validate_survival_coattn(cur, epoch, model, val_loader, args.n_classes, early_stopping, monitor_cindex, writer, loss_fn, reg_fn, args.lambda_reg, args.results_dir, args)
 
-    if c_index_val > max_c_index:
-        max_c_index = c_index_val
-        epoch_max_c_index = epoch
-        save_name = 's_{}_checkpoint'.format(cur)
+        if c_index_val > max_c_index:
+            max_c_index = c_index_val
+            epoch_max_c_index = epoch
+            save_name = 's_{}_checkpoint'.format(cur)
 
-        torch.save(model.state_dict(), os.path.join(args.results_dir, save_name + ".pt".format(cur)))
-        best_val_dict = val_latest
+            torch.save(model.state_dict(), os.path.join(args.results_dir, save_name + ".pt".format(cur)))
+            best_val_dict = val_latest
 
     if args.log_data:
         writer.close()

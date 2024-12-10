@@ -46,7 +46,8 @@ def parse():
                         default=True, help='Use genomic features as signature embeddings.')
 
     parser.add_argument('--data_root_dir', type=str,
-                        default='/home/cvnlp/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        # default='/home/cvnlp/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        default='/media/lenovo/D2B96B35B0D939DD/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
 
     parser.add_argument('--log_data', action='store_true',
                         default=True, help='Log data using tensorboard')
@@ -88,7 +89,7 @@ def parse():
                         default=0, help='start_epoch.')
 
     parser.add_argument('--max_epochs', type=int,
-                        default=50, help='Maximum number of epochs to train (default: 20)')
+                        default=200, help='Maximum number of epochs to train (default: 20)')
 
     parser.add_argument('--lambda_reg', type=float,
                         default=1e-4, help='L1-Regularization Strength (Default 1e-4)')

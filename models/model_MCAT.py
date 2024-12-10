@@ -124,10 +124,13 @@ class MCAT_Surv(nn.Module):
         e_h = sum_embedding + bi_embedding
         # WiKG 公式 9 生成 graph-level 嵌入 embedding_graph
         e_h = self.message_dropout(e_h)
-        e_g = self.readout(e_h.squeeze(0), batch=None)  # [1, 512]
+        # e_g = self.readout(e_h.squeeze(0), batch=None)  # [1, 512]
+        e_g = self.readout(e_h.squeeze(0), batch=None).unsqueeze(0)  # [1, 1, 512]
 
         # Coattn
-        h_path_coattn, A_coattn = self.coattn(h_omic_bag, h_path_bag, h_path_bag)
+        # h_path_coattn, A_coattn = self.coattn(h_omic_bag, h_path_bag, h_path_bag)
+        # h_path_coattn, A_coattn = self.coattn(h_omic_bag, e_g, e_g)
+        h_path_coattn, A_coattn = self.coattn(h_omic_bag, e_h, e_h)
 
         ### Path
         h_path_trans = self.path_transformer(h_path_coattn)
