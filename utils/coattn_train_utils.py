@@ -10,7 +10,7 @@ from lifelines.utils import concordance_index
 from sksurv.metrics import concordance_index_censored
 
 
-def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, writer=None, loss_fn=None, reg_fn=None, lambda_reg=0., gc=16):
+def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, writer=None, loss_fn=None, reg_fn=None, lambda_reg=0., gc=16, args=None):
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     model.train()
     train_loss_surv, train_loss = 0., 0.
