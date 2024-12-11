@@ -30,7 +30,8 @@ def parse():
                         default='5foldcv', help='Which splits folder to use in ./splits/ (Default: ./splits/5foldcv')
 
     parser.add_argument('--model_type', type=str, choices=['snn', 'amil', 'mcat', 'motcat', 'pgbf'],
-                        default='mcat', help='Type of model (Default: pgbf)')
+                        # default='mcat', help='Type of model (Default: pgbf)')
+                        default='motcat', help='Type of model (Default: pgbf)')
 
     parser.add_argument('--mode', type=str, choices=['omic', 'path', 'pathomic', 'cluster', 'coattn'],
                         default='coattn', help='Specifies which modalities to use / collate function in dataloader.')
@@ -89,13 +90,22 @@ def parse():
                         default=0, help='start_epoch.')
 
     parser.add_argument('--max_epochs', type=int,
-                        default=200, help='Maximum number of epochs to train (default: 20)')
+                        default=50, help='Maximum number of epochs to train (default: 20)')
 
     parser.add_argument('--lambda_reg', type=float,
                         default=1e-4, help='L1-Regularization Strength (Default 1e-4)')
 
     parser.add_argument('--gc', type=int,
                         default=32, help='Gradient Accumulation Step.')
+
+    parser.add_argument('--ot_reg', type=float,
+                        default=0.05, help='epsilon of OT (default: 0.1)')
+
+    parser.add_argument('--ot_tau', type=float,
+                        default=0.5, help='tau of UOT (default: 0.5)')
+
+    parser.add_argument('--ot_impl', type=str,
+                        default='pot-uot-l2', help='impl of ot (default: pot-uot-l2)')
 
     return parser.parse_args()
 

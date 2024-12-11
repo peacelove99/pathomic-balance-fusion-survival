@@ -197,12 +197,15 @@ class MOTCAT_Surv(nn.Module):
         h_omic = [self.sig_networks[idx].forward(sig_feat) for idx, sig_feat in
                   enumerate(x_omic)]  ### each omic signature goes through it's own FC layer
         h_omic_bag = torch.stack(h_omic).unsqueeze(1)  ### omic embeddings are stacked (to be used in co-attention)
-
+        # print('h_path_bag.size():',h_path_bag.size()) # [21209, 1, 256]
+        # print('e_h.permute(1, 0, 2).size():',e_h.permute(1, 0, 2).size()) # [21209, 1, 256]
+        # print('e_g.size():',e_g.size()) # [1, 1, 256]
         ### Coattn
         # A_coattn, _ = self.coattn(h_path_bag, h_omic_bag)  # MOTCat
-        # A_coattn, _ = self.coattn(e_h.permute(1, 0, 2), h_omic_bag)  # MOTCat & WiKG
-        A_coattn, _ = self.coattn(e_g, h_omic_bag)  # MOTCat & WiKG readout
-        h_path_coattn = torch.mm(A_coattn.squeeze(), h_path_bag.squeeze()).unsqueeze(1)
+        A_coattn, _ = self.coattn(e_h.permute(1, 0, 2), h_omic_bag)  # MOTCat & WiKG
+        # A_coattn, _ = self.coattn(e_g, h_omic_bag)  # MOTCat & WiKG readout
+        # h_path_coattn = torch.mm(A_coattn.squeeze(), h_path_bag.squeeze()).unsqueeze(1)
+        h_path_coattn = torch.mm(A_coattn.squeeze(), e_h.squeeze()).unsqueeze(1)
 
         ### Path
         h_path_trans = self.path_transformer(h_path_coattn)
@@ -231,4 +234,5 @@ class MOTCAT_Surv(nn.Module):
 
         attention_scores = {'coattn': A_coattn, 'path': A_path, 'omic': A_omic}
 
-        return hazards, S, Y_hat, h_path, h_omic, attention_scores
+        # return hazards, S, Y_hat, h_path, h_omic, attention_scores
+        return hazards, S, Y_hat, attention_scores
