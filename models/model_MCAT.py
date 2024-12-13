@@ -59,8 +59,7 @@ class MCAT_Surv(nn.Module):
         self.coattn = MultiheadAttention(embed_dim=256, num_heads=1)
 
         ### Path Transformer + Attention Head
-        path_encoder_layer = nn.TransformerEncoderLayer(d_model=256, nhead=8, dim_feedforward=512, dropout=dropout,
-                                                        activation='relu')
+        path_encoder_layer = nn.TransformerEncoderLayer(d_model=256, nhead=8, dim_feedforward=512, dropout=dropout, activation='relu')
         self.path_transformer = nn.TransformerEncoder(path_encoder_layer, num_layers=2)
         self.path_attention_head = Attn_Net_Gated(L=size[2], D=size[2], dropout=dropout, n_classes=1)
         self.path_rho = nn.Sequential(*[nn.Linear(size[2], size[2]), nn.ReLU(), nn.Dropout(dropout)])

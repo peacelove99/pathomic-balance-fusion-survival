@@ -1,11 +1,11 @@
 from __future__ import print_function, division
+
 import os
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-
 import torch
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
 
 
