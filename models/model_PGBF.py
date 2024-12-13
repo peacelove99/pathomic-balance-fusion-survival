@@ -229,9 +229,20 @@ class PGBF_Surv(nn.Module):
         S = torch.cumprod(1 - hazards, dim=1)
         # print('S.size():', S.size())
 
+        logits_omic = self.classifier(h_omic).unsqueeze(0)
+        hazards_omic = torch.sigmoid(logits_omic)
+        S_omic = torch.cumprod(1 - hazards_omic, dim=1)
+
+        logits_path = self.classifier(h_path).unsqueeze(0)
+        hazards_path = torch.sigmoid(logits_path)
+        S_path = torch.cumprod(1 - hazards_path, dim=1)
+
+        result = {'hazards': hazards_omic, 'S': S_omic}
+        result_omic = {'hazards': hazards_omic, 'S': S_omic}
+        result_path = {'hazards': hazards_path, 'S': S_path}
+
         # attention_scores = {'coattn': A_coattn, 'path': A_path, 'omic': A_omic}
-        attention_scores = {}
 
         # return hazards, S, Y_hat, attention_scores, h_path, h_omic
-        return hazards, S, Y_hat, attention_scores
+        return result, result_omic, result_path
 

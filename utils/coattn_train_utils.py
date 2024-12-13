@@ -1,17 +1,12 @@
-import numpy as np
-import torch
-import pickle 
-from utils.utils import *
 import os
-from collections import OrderedDict
 
-from argparse import Namespace
-from lifelines.utils import concordance_index
-from sksurv.metrics import concordance_index_censored
+from torch import nn
+
+from utils.utils import *
 
 
 def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, writer=None, loss_fn=None, reg_fn=None, lambda_reg=0., gc=16, args=None):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.train()
     train_loss_surv, train_loss = 0., 0.
 
@@ -19,7 +14,7 @@ def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, write
     all_risk_scores = np.zeros((len(loader)))
     all_censorships = np.zeros((len(loader)))
     all_event_times = np.zeros((len(loader)))
-    
+
     for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c, slide_name) in enumerate(loader):
         # print('slide_name:',slide_name)  # debug slide_name
 
@@ -33,16 +28,22 @@ def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, write
         label = label.type(torch.LongTensor).to(device)
         c = c.type(torch.FloatTensor).to(device)
 
-        hazards, S, Y_hat, A  = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
-        loss = loss_fn(hazards=hazards, S=S, Y=label, c=c)
+        # hazards, S, Y_hat, A = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
+        # loss = loss_fn(hazards=hazards, S=S, Y=label, c=c)
+        result, result_omic, result_path = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
+        loss = loss_fn(hazards=result['hazards'], S=result['S'], Y=label, c=c)
         loss_value = loss.item()
+        loss_omic = loss_fn(hazards=result_omic['hazards'], S=result_omic['S'], Y=label, c=c)
+        loss_omic_value = loss_omic.item()
+        loss_path = loss_fn(hazards=result_path['hazards'], S=result_path['S'], Y=label, c=c)
+        loss_path_value = loss_path.item()
 
         if reg_fn is None:
             loss_reg = 0
         else:
             loss_reg = reg_fn(model) * lambda_reg
 
-        risk = -torch.sum(S, dim=1).detach().cpu().numpy()
+        risk = -torch.sum(result['S'], dim=1).detach().cpu().numpy()
         all_risk_scores[batch_idx] = risk
         all_censorships[batch_idx] = c.item()
         all_event_times[batch_idx] = event_time
@@ -55,7 +56,23 @@ def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, write
         loss = loss / gc + loss_reg
         loss.backward()
 
-        if (batch_idx + 1) % gc == 0: 
+        ratio_omic = loss_omic_value / loss_path_value
+        ratio_path = 1 / ratio_omic
+
+        tanh = nn.Tanh()
+        relu = nn.ReLU(inplace=True)
+
+        if ratio_omic > 1:
+            coeff_omic = 1 - tanh(args.alpha * relu(ratio_omic))
+            coeff_path = 1
+        else:
+            coeff_path = 1 - tanh(args.alpha * relu(ratio_path))
+            coeff_omic = 1
+
+        for name, parms in model.named_parameters():
+            print('name:', name)
+
+        if (batch_idx + 1) % gc == 0:
             optimizer.step()
             optimizer.zero_grad()
 
@@ -69,6 +86,9 @@ def train_loop_survival_coattn(epoch, model, loader, optimizer, n_classes, write
         writer.add_scalar('train/loss_surv', train_loss_surv, epoch)
         writer.add_scalar('train/loss', train_loss, epoch)
         writer.add_scalar('train/c_index', c_index, epoch)
+
+        writer.add_scalar('data/coefficient omic', coeff_omic, epoch)
+        writer.add_scalar('data/coefficient path', coeff_path, epoch)
 
 
 def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stopping=None, monitor_cindex=None, writer=None, loss_fn=None, reg_fn=None, lambda_reg=0., results_dir=None, args=None):
@@ -97,9 +117,11 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
         slide_id = slide_ids.iloc[batch_idx]
 
         with torch.no_grad():
-            hazards, S, Y_hat, A = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6) # return hazards, S, Y_hat, A_raw, results_dict
+            # hazards, S, Y_hat, A = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
+            result, result_omic, result_path = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
 
-        loss = loss_fn(hazards=hazards, S=S, Y=label, c=c, alpha=0)
+        # loss = loss_fn(hazards=hazards, S=S, Y=label, c=c, alpha=0)
+        loss = loss_fn(hazards=result['hazards'], S=result['S'], Y=label, c=c, alpha=0)
         loss_value = loss.item()
 
         if reg_fn is None:
@@ -107,7 +129,7 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
         else:
             loss_reg = reg_fn(model) * lambda_reg
 
-        risk = -torch.sum(S, dim=1).cpu().numpy()  # 计算风险分数
+        risk = -torch.sum(result['S'], dim=1).cpu().numpy()  # 计算风险分数
         all_risk_scores[batch_idx] = risk  # 存储风险分数
         all_censorships[batch_idx] = c.cpu().numpy()  # 存储审查状态
         all_event_times[batch_idx] = event_time  # 存储事件时间
@@ -141,43 +163,3 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
             return True
 
     return patient_results, c_index, False
-
-
-def summary_survival_coattn(model, loader, n_classes):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.eval()
-    test_loss = 0.
-
-    all_risk_scores = np.zeros((len(loader)))
-    all_censorships = np.zeros((len(loader)))
-    all_event_times = np.zeros((len(loader)))
-
-    slide_ids = loader.dataset.slide_data['slide_id']
-    patient_results = {}
-
-    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c) in enumerate(loader):
-        
-        data_WSI = data_WSI.to(device)
-        data_omic1 = data_omic1.type(torch.FloatTensor).to(device)
-        data_omic2 = data_omic2.type(torch.FloatTensor).to(device)
-        data_omic3 = data_omic3.type(torch.FloatTensor).to(device)
-        data_omic4 = data_omic4.type(torch.FloatTensor).to(device)
-        data_omic5 = data_omic5.type(torch.FloatTensor).to(device)
-        data_omic6 = data_omic6.type(torch.FloatTensor).to(device)
-        label = label.type(torch.LongTensor).to(device)
-        c = c.type(torch.FloatTensor).to(device)
-        slide_id = slide_ids.iloc[batch_idx]
-
-        with torch.no_grad():
-            hazards, survival, Y_hat, A  = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6) # return hazards, S, Y_hat, A_raw, results_dict
-
-        risk = np.asscalar(-torch.sum(survival, dim=1).cpu().numpy())
-        event_time = np.asscalar(event_time)
-        c = np.asscalar(c)
-        all_risk_scores[batch_idx] = risk
-        all_censorships[batch_idx] = c
-        all_event_times[batch_idx] = event_time
-        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'risk': risk, 'disc_label': label.item(), 'survival': event_time, 'censorship': c}})
-
-    c_index = concordance_index_censored((1-all_censorships).astype(bool), all_event_times, all_risk_scores, tied_tol=1e-08)[0]
-    return patient_results, c_index

@@ -73,7 +73,10 @@ motcat_wikg_top6_c_indexes = [0.6521, 0.6733, 0.6944, 0.7062, 0.6548]
 motcat_wikg_top10_c_indexes = [0.6723, 0.6712, 0.6944, 0.6825, 0.6580]
 
 # MOTCat WiKG TOP12数据
-motcat_wikg_top10_c_indexes = [0.6712, 0.6712, 0.6963, 0.7062, 0.6446]
+motcat_wikg_top12_c_indexes = [0.6712, 0.6712, 0.6963, 0.7062, 0.6446]
+
+# MOTCat WiKG TOP24数据
+motcat_wikg_top24_c_indexes = [0.6698, 0.6821, 0.6861, 0.7069, 0.5518]
 
 # 计算平均值
 mean_mcat = np.mean(mcat_c_indexes)
@@ -82,28 +85,26 @@ mean_motcat = np.mean(motcat_c_indexes)
 motcat_wikg01 = np.mean(motcat_wikg01_c_indexes)
 motcat_wikg_top6 = np.mean(motcat_wikg_top6_c_indexes)
 motcat_wikg_top10 = np.mean(motcat_wikg_top10_c_indexes)
+motcat_wikg_top12 = np.mean(motcat_wikg_top12_c_indexes)
+motcat_wikg_top24 = np.mean(motcat_wikg_top24_c_indexes)
 
 # 计算方差（使用NumPy的var函数，它默认计算的是样本方差，即除以n-1）
-var_mcat = np.var(mcat_c_indexes, ddof=1)  # ddof=1表示计算样本方差
-var_wikg = np.var(mcat_wikg_c_indexes, ddof=1)
-var_motcat = np.var(motcat_c_indexes, ddof=1)
-var_motcat_wikg01 = np.var(motcat_wikg01_c_indexes, ddof=1)
-var_motcat_wikg_top6 = np.var(motcat_wikg_top6_c_indexes, ddof=1)
-var_motcat_wikg_top10 = np.var(motcat_wikg_top10_c_indexes, ddof=1)
+std_mcat = np.std(mcat_c_indexes, ddof=1)
+std_mcat_wikg = np.std(mcat_wikg_c_indexes, ddof=1)
+std_motcat = np.std(motcat_c_indexes, ddof=1)
+std_motcat_wikg01 = np.std(motcat_wikg01_c_indexes, ddof=1)
+std_motcat_wikg_top6 = np.std(motcat_wikg_top6_c_indexes, ddof=1)
+std_motcat_wikg_top10 = np.std(motcat_wikg_top10_c_indexes, ddof=1)
+std_motcat_wikg_top12 = np.std(motcat_wikg_top12_c_indexes, ddof=1)
+std_motcat_wikg_top24 = np.std(motcat_wikg_top24_c_indexes, ddof=1)
 
 # 打印结果
 print(f"MCAT的平均值: {mean_mcat}")  # 0.67858
-# print(f"MCAT的方差: {var_mcat}")
-print(f"MCAT&WiKG的平均值: {mean_wikg}")  # 0.67504
-# print(f"MCAT&WiKG的方差: {var_wikg}")
+print(f"MCAT的方差: {std_mcat}")
 print(f"MOTCat的平均值: {mean_motcat}")  # 0.681
-# print(f"MOTCat的方差: {var_motcat}")
-print(f"MOTCat WiKG 01的平均值: {motcat_wikg01}")  # 0.6772
-# print(f"MOTCat WiKG 01的方差: {var_motcat_wikg01}")
-print(f"MOTCat WiKG top6的平均值: {motcat_wikg_top6}")  # 0.67616
-# print(f"MOTCat WiKG top6的方差: {var_motcat_wikg_top6}")
-print(f"MOTCat WiKG top10的平均值: {motcat_wikg_top10}")  # 0.6756
-# print(f"MOTCat WiKG top10的方差: {var_motcat_wikg02}")
+print(f"MOTCat的方差: {std_motcat}")
+print(f"MOTCat WiKG top24的平均值: {motcat_wikg_top24}")  # 0.6772
+print(f"MOTCat WiKG 24的方差: {std_motcat_wikg_top24}")
 
 
 def draw(filename):
@@ -142,5 +143,5 @@ def draw(filename):
     plt.show()  # 显示图形
 
 
-file = r'C:\Users\Obliviate\Desktop\motcat_coattn\tcga_luad_s1\4\log.txt'
-draw(filename=file)
+# file = r'C:\Users\Obliviate\Desktop\motcat_coattn\tcga_luad_s1\4\log.txt'
+# draw(filename=file)
