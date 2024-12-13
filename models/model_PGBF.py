@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from numpy.array_api import squeeze
+from torch.onnx.symbolic_opset9 import square
 from torch_geometric.nn import GlobalAttention
 
 from models.model_MCAT import MultiheadAttention
@@ -83,121 +85,153 @@ class PGBF_Surv(nn.Module):
         x_omic = [kwargs['x_omic%d' % i] for i in range(1, 7)]  # 包含六个不同组学的特征数据
         x_path = kwargs['x_path']
 
-        edge_index = x_path.edge_latent
-        print('edge_index.size():', edge_index.size())
-
         ### omic encoder
+        # print('omic encoder')
         h_omic = [self.sig_networks[idx].forward(sig_feat) for idx, sig_feat in enumerate(x_omic)]
         h_omic_bag = torch.stack(h_omic)  # [6, 256]
-        print('h_omic_bag.size():', h_omic_bag.size())
+        # print('h_omic_bag.size():', h_omic_bag.size())
 
         ### path encoder
+        # print('path encoder')
         h_path_bag = self.wsi_net(x_path)  # [num_patch, 256]
-        print('h_path_bag.size():', h_path_bag.size())
+        # print('h_path_bag.size():', h_path_bag.size())
 
         ### path graph
+        # print('path graph')
         h_path_bag = h_path_bag.unsqueeze(0)  # [1, num_patch, 256]
         # WiKG 公式1 每个补丁的嵌入投影为头部和尾部嵌入
         e_h = self.W_head(h_path_bag)  # embedding_head [num_patch, 256]
         e_t = self.W_tail(h_path_bag)  # embedding_tail [num_patch, 256]
-        print('e_h.size():', e_h.size(), ';e_t.size():', e_t.size())
+        # print('e_h.size():', e_h.size(), ';e_t.size():', e_t.size())
 
         # WiKG 公式2 3 相似性得分最高的前 k 个补丁被选为补丁 i 的邻居
         attn_logit = (e_h * self.scale) @ e_t.transpose(-2, -1)  # 计算 e_h 和 e_t 之间的相似性(点积)
-        print('attn_logit.size():', attn_logit.size())
+        # print('attn_logit.size():', attn_logit.size())
         topk_weight, topk_index = torch.topk(attn_logit, k=self.topk, dim=-1)  # 获取 Top - k 注意力分数和对应索引
-        print('topk_weight.size():', topk_weight.size(), 'topk_index.size():', topk_index.size())
+        # print('topk_weight.size():', topk_weight.size(), 'topk_index.size():', topk_index.size())
         topk_prob = F.softmax(topk_weight, dim=-1)  # 归一化注意力分数
-        print('topk_prob.size():', topk_prob.size())
+        # print('topk_prob.size():', topk_prob.size())
 
         topk_index = topk_index.to(torch.long)  # 转换索引类型
-        print('topk_index.size():', topk_index.size())
+        # print('topk_index.size():', topk_index.size())
         topk_index_expanded = topk_index.expand(e_t.size(0), -1, -1)  # 扩展索引以匹配 e_t 维度
-        print('topk_index_expanded.size():', topk_index_expanded.size())
+        # print('topk_index_expanded.size():', topk_index_expanded.size())
         batch_indices = torch.arange(e_t.size(0)).view(-1, 1, 1).to(topk_index.device)  # 创建批次索引辅助张量
-        print('batch_indices.size():', batch_indices.size())
+        # print('batch_indices.size():', batch_indices.size())
         Nb_h = e_t[batch_indices, topk_index_expanded, :]  # 使用索引从 e_t 中提取特征向量 neighbors_head
-        print('Nb_h.size():', Nb_h.size())
+        # print('Nb_h.size():', Nb_h.size())
 
         # WiKG 公式 4 为有向边分配嵌入 embedding head_r
         eh_r = torch.mul(topk_prob.unsqueeze(-1), Nb_h) + torch.matmul((1 - topk_prob).unsqueeze(-1), e_h.unsqueeze(2))
-        print('eh_r.size():', eh_r.size())
+        # print('eh_r.size():', eh_r.size())
 
         # WiKG 公式 6 计算 加权因子
         e_h_expand = e_h.unsqueeze(2).expand(-1, -1, self.topk, -1)
-        print('e_h_expand.size():', e_h_expand.size())
+        # print('e_h_expand.size():', e_h_expand.size())
         gate = torch.tanh(e_h_expand + eh_r)
-        print('gate.size():', gate.size())
+        # print('gate.size():', gate.size())
         ka_weight = torch.einsum('ijkl,ijkm->ijk', Nb_h, gate)
-        print('ka_weight.size():', ka_weight.size())
+        # print('ka_weight.size():', ka_weight.size())
 
         # WiKG 公式 7 对 加权因子 进行归一化
         ka_prob = F.softmax(ka_weight, dim=2).unsqueeze(dim=2)
-        print('ka_prob.size():', ka_prob.size())
+        # print('ka_prob.size():', ka_prob.size())
 
         # WiKG 公式 5 计算补丁 i 相邻 N （i） 的尾部嵌入的线性组合
         e_Nh = torch.matmul(ka_prob, Nb_h).squeeze(dim=2)
-        print('e_Nh.size():', e_Nh.size())
+        # print('e_Nh.size():', e_Nh.size())
 
         # WiKG 公式 8 将聚合的邻居信息 e_Nh 与原始 head 融合
         sum_embedding = self.activation(self.linear1(e_h + e_Nh))
-        print('sum_embedding.size():', sum_embedding.size())
+        # print('sum_embedding.size():', sum_embedding.size())
         bi_embedding = self.activation(self.linear2(e_h * e_Nh))
-        print('bi_embedding.size():', bi_embedding.size())
+        # print('bi_embedding.size():', bi_embedding.size())
         e_h = sum_embedding + bi_embedding
-        print('e_h.size():', e_h.size())
+        # print('e_h.size():', e_h.size())
 
         # WiKG 公式 9 生成 graph-level 嵌入 embedding_graph
         e_h = self.message_dropout(e_h)
-        print('e_h.size():', e_h.size())
+        # print('e_h.size():', e_h.size())
         e_g = self.readout(e_h.squeeze(0), batch=None)
-        print('e_g.size():', e_g.size())
+        # print('e_g.size():', e_g.size())
 
         ### coattn graph & omic
+        # print(self.coattn_model, 'coattn')
         if self.coattn_model == "TMI_2024":
-            h_path_bag, G_coattn = self.coattn(h_omic_bag, h_path_bag, h_path_bag)  # TMI_2024
+            # h_omic_bag & h_path_bag = [batch_size, seq_len, in_feature]
+            # print("q=h_omic_bag.unsqueeze(0):",h_omic_bag.unsqueeze(0).size())
+            # print("k=e_h:",e_h.size())
+            # print("v=e_h:",e_h.size())
+            # h_path_bag, G_coattn = self.coattn(h_omic_bag.squeeze(0), h_path_bag.squeeze(0), h_path_bag.squeeze(0))  # TMI_2024
+            h_path_bag, G_coattn = self.coattn(h_omic_bag.unsqueeze(0), e_h, e_h)  # TMI_2024
         elif self.coattn_model == "MOTCat":
-            A_coattn, _ = self.coattn(h_path_bag, h_omic_bag)  # MOTCat
+            # A_coattn, _ = self.coattn(h_path_bag.unsqueeze(1), h_omic_bag.unsqueeze(1))  # MOTCat
+            A_coattn, _ = self.coattn(e_h.permute(1, 0, 2), h_omic_bag.unsqueeze(1))  # MOTCat
+            # print('A_coattn.size():', A_coattn.size())
+            # h_path_coattn = torch.mm(A_coattn.squeeze(), h_path_bag.squeeze()).unsqueeze(1)
+            h_path_coattn = torch.mm(A_coattn.squeeze(), e_h.squeeze()).unsqueeze(1)
+            # print('h_path_coattn.size():', h_path_coattn.size())
         elif self.coattn_model == "MCAT":
             h_path_coattn, A_coattn = self.coattn(h_omic_bag, h_path_bag, h_path_bag)  # MCAT
 
         ### path decoder
+        # print('path decoder')
         if self.coattn_model == "TMI_2024":
             A_path, h_path = self.path_attention_head(h_path_bag)  # TMI_2024
+            A_path = A_path.squeeze(0)
+            h_path = h_path.squeeze(0)
+            # print('A_path.size():', A_path.size(), 'h_path.size():', h_path.size())
             A_path = torch.transpose(A_path, 1, 0)
+            # print('A_path.size():', A_path.size())
             h_path = torch.mm(F.softmax(A_path, dim=1), h_path)
+            # print('h_path.size():', h_path.size())
             h_path = self.path_rho(h_path).squeeze()
+            # print('h_path.size():', h_path.size())
         elif self.coattn_model == "MOTCat" or self.coattn_model == "MCAT":
             h_path_trans = self.path_transformer(h_path_coattn)  # MCAT & MOTCat
+            # print('h_path_trans.size():', h_path_trans.size())
             A_path, h_path = self.path_attention_head(h_path_trans.squeeze(1))
+            # print('A_path.size():', A_path.size(), 'h_path.size():', h_path.size())
             A_path = torch.transpose(A_path, 1, 0)
+            # print('A_path.size():', A_path.size())
             h_path = torch.mm(F.softmax(A_path, dim=1), h_path)
+            # print('h_path.size():', h_path.size())
             h_path = self.path_rho(h_path).squeeze()
-        print(self.coattn_model, 'h_path.size():', h_path.size())
+            # print('h_path.size():', h_path.size())
 
         ### omic decoder
+        # print('omic decoder')
         if self.coattn_model == "MOTCat" or self.coattn_model == "MCAT":
             h_omic_trans = self.omic_transformer(h_omic_bag)  # MCAT & MOTCat
             A_omic, h_omic = self.omic_attention_head(h_omic_trans.squeeze(1))
             A_omic = torch.transpose(A_omic, 1, 0)
             h_omic = torch.mm(F.softmax(A_omic, dim=1), h_omic)
             h_omic = self.omic_rho(h_omic).squeeze()
-            print(self.coattn_model, 'h_omic.size():', h_omic.size())
+            # print(self.coattn_model, 'h_omic.size():', h_omic.size())
 
         ### Fusion Layer
+        # print('Fusion Layer')
         if self.coattn_model == "TMI_2024":
             h = h_path
         elif self.coattn_model == "MOTCat" or self.coattn_model == "MCAT":
             h = self.mm(torch.cat([h_path, h_omic], axis=0))  # MCAT & MOTCat
-        print(self.coattn_model, 'h.size():', h.size())
+        # print(self.coattn_model, 'h.size():', h.size())
 
         ### Survival Layer
-        logits = self.classifier(h)  # .unsqueeze(0) # logits needs to be a [1 x 4] vector
-        print('logits.size():', logits.size())
+        # print('Survival Layer')
+        # logits = self.classifier(h)  # .unsqueeze(0) # logits needs to be a [1 x 4] vector
+        logits = self.classifier(h).unsqueeze(0) # logits needs to be a [1 x 4] vector
+        # print('logits.size():', logits.size())
         Y_hat = torch.topk(logits, 1, dim=1)[1]
-        print('Y_hat.size():', Y_hat.size())
+        # print('Y_hat.size():', Y_hat.size())
         hazards = torch.sigmoid(logits)
-        print('hazards.size():', hazards.size())
+        # print('hazards.size():', hazards.size())
         S = torch.cumprod(1 - hazards, dim=1)
-        print('S.size():', S.size())
+        # print('S.size():', S.size())
+
+        # attention_scores = {'coattn': A_coattn, 'path': A_path, 'omic': A_omic}
+        attention_scores = {}
+
+        # return hazards, S, Y_hat, attention_scores, h_path, h_omic
+        return hazards, S, Y_hat, attention_scores
 

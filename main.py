@@ -30,8 +30,7 @@ def parse():
                         default='5foldcv', help='Which splits folder to use in ./splits/ (Default: ./splits/5foldcv')
 
     parser.add_argument('--model_type', type=str, choices=['snn', 'amil', 'mcat', 'motcat', 'pgbf'],
-                        # default='mcat', help='Type of model (Default: pgbf)')
-                        default='motcat', help='Type of model (Default: pgbf)')
+                        default='pgbf', help='Type of model (Default: pgbf)')
 
     parser.add_argument('--mode', type=str, choices=['omic', 'path', 'pathomic', 'cluster', 'coattn'],
                         default='coattn', help='Specifies which modalities to use / collate function in dataloader.')
@@ -47,8 +46,8 @@ def parse():
                         default=True, help='Use genomic features as signature embeddings.')
 
     parser.add_argument('--data_root_dir', type=str,
-                        # default='/home/cvnlp/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
-                        default='/media/lenovo/D2B96B35B0D939DD/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        default='/home/cvnlp/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        # default='/media/lenovo/D2B96B35B0D939DD/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
 
     parser.add_argument('--log_data', action='store_true',
                         default=True, help='Log data using tensorboard')
