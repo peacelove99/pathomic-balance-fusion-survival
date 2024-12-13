@@ -194,8 +194,7 @@ class MOTCAT_Surv(nn.Module):
         # e_g = self.readout(e_h.squeeze(0), batch=None)  # [1, 512]
         e_g = self.readout(e_h.squeeze(0), batch=None).unsqueeze(0)  # [1, 1, 512]
 
-        h_omic = [self.sig_networks[idx].forward(sig_feat) for idx, sig_feat in
-                  enumerate(x_omic)]  ### each omic signature goes through it's own FC layer
+        h_omic = [self.sig_networks[idx].forward(sig_feat) for idx, sig_feat in enumerate(x_omic)]  ### each omic signature goes through it's own FC layer
         h_omic_bag = torch.stack(h_omic).unsqueeze(1)  ### omic embeddings are stacked (to be used in co-attention)
         # print('h_path_bag.size():',h_path_bag.size()) # [21209, 1, 256]
         # print('e_h.permute(1, 0, 2).size():',e_h.permute(1, 0, 2).size()) # [21209, 1, 256]

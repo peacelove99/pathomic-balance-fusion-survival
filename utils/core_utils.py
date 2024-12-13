@@ -3,6 +3,7 @@ import os
 from datasets.dataset_generic import save_splits
 from models.model_MCAT import MCAT_Surv
 from models.model_MOTCat import MOTCAT_Surv
+from models.model_tmi2024 import GraphMixer_Surv
 from utils.coattn_train_utils import *
 from utils.utils import *
 
@@ -70,6 +71,12 @@ def train(datasets: tuple, cur: int, args: Namespace):
     elif args.model_type == 'motcat':
         model_dict = {'ot_reg': args.ot_reg, 'ot_tau': args.ot_tau, 'ot_impl': args.ot_impl, 'fusion': args.fusion, 'omic_sizes': args.omic_sizes, 'n_classes': args.n_classes}
         model = MOTCAT_Surv(**model_dict)
+    elif args.model_type == 'graphmixer':
+        model_dict = {'num_layers': args.num_gcn_layers, 'edge_agg': args.edge_agg, 'resample': args.resample, 'n_classes': args.n_classes, 'omic_sizes': train_split.omic_sizes, 'num_features': args.input_dim}
+        model = GraphMixer_Surv(**model_dict)
+    elif args.model_type == 'pgbf':
+        model_dict = {'fusion': args.fusion, 'omic_sizes': args.omic_sizes, 'n_classes': args.n_classes}
+        model = GraphMixer_Surv(**model_dict)
     else:
         raise NotImplementedError
 
@@ -115,6 +122,7 @@ def train(datasets: tuple, cur: int, args: Namespace):
     for epoch in range(args.start_epoch, args.max_epochs):
         train_loop_survival_coattn(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, reg_fn, args.lambda_reg, args.gc, args)
         val_latest, c_index_val, stop = validate_survival_coattn(cur, epoch, model, val_loader, args.n_classes, early_stopping, monitor_cindex, writer, loss_fn, reg_fn, args.lambda_reg, args.results_dir, args)
+
 
         if c_index_val > max_c_index:
             max_c_index = c_index_val

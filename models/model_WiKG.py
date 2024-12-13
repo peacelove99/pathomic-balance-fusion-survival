@@ -5,25 +5,10 @@ from torch_geometric.nn import GlobalAttention
 
 import os
 
+from models.model_utils import SNN_Block
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
-def SNN_Block(dim1, dim2, dropout=0.25):
-    r"""
-    Multilayer Reception Block w/ Self-Normalization (Linear + ELU + Alpha Dropout)
-
-    args:
-        dim1 (int): Dimension of input features
-        dim2 (int): Dimension of output features
-        dropout (float): Dropout rate
-    """
-    import torch.nn as nn
-
-    return nn.Sequential(
-        nn.Linear(dim1, dim2),
-        nn.ELU(),
-        nn.AlphaDropout(p=dropout, inplace=False))
 
 
 class PGBF(nn.Module):
