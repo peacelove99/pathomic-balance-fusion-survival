@@ -10,6 +10,7 @@ from utils.utils import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def train(datasets: tuple, cur: int, args: Namespace):
     """
         train for a single fold
@@ -37,20 +38,9 @@ def train(datasets: tuple, cur: int, args: Namespace):
     print('Done!')
     ########################################################################################################################
     print('\nInit loss function...', end=' ')
-    # if args.task_type == 'survival':
-    if args.bag_loss == 'ce_surv':
-        loss_fn = CrossEntropySurvLoss(alpha=args.alpha_surv)
-        print("Training with CrossEntropySurvLoss")
-    elif args.bag_loss == 'nll_surv':
-        loss_fn = NLLSurvLoss(alpha=args.alpha_surv)
-        print("Training with NLLSurvLoss")
-    elif args.bag_loss == 'cox_surv':
-        loss_fn = CoxSurvLoss()
-        print("Training with CoxSurvLoss")
-    else:
-        raise NotImplementedError
-    # else:
-    #     raise NotImplementedError
+
+    from utils.loss import define_loss
+    loss_fn = define_loss(args)
 
     if args.reg_type == 'omic':
         reg_fn = l1_reg_all
@@ -121,9 +111,8 @@ def train(datasets: tuple, cur: int, args: Namespace):
     best_val_dict = {}
 
     for epoch in range(args.start_epoch, args.max_epochs):
-        train_loop_survival_coattn(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, reg_fn, args.lambda_reg, args.gc, args)
-        val_latest, c_index_val, stop = validate_survival_coattn(cur, epoch, model, val_loader, args.n_classes, early_stopping, monitor_cindex, writer, loss_fn, reg_fn, args.lambda_reg, args.results_dir, args)
-
+        train_loop(epoch, train_loader, model, loss_fn, optimizer, args, writer)
+        val_latest, c_index_val, stop = validate(epoch, val_loader, model, loss_fn, args, writer)
 
         if c_index_val > max_c_index:
             max_c_index = c_index_val

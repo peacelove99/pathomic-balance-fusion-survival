@@ -51,8 +51,8 @@ def parse():
     parser.add_argument('--log_data', action='store_true',
                         default=True, help='Log data using tensorboard')
 
-    parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce', 'ce_surv', 'nll_surv', 'cox_surv'],
-                        default='nll_surv', help='slide-level classification loss function (default: ce)')
+    parser.add_argument('--loss', type=str, choices=['ce_surv', 'nll_surv', 'nll_surv_kl', 'nll_surv_mse', 'nll_surv_l1', 'nll_surv_cos', 'nll_surv_ol'],
+                        default='nll_surv_l1', help='slide-level classification loss function (default: ce)')
 
     parser.add_argument('--alpha_surv', type=float,
                         default=0.0, help='How much to weigh uncensored patients')

@@ -57,54 +57,22 @@ import numpy as np
 # MCAT数据
 mcat_c_indexes = [0.6824, 0.6774, 0.6816, 0.6999, 0.6516]
 
-# WiKG readout数据
-mcat_wikg_c_indexes = [0.6837, 0.6917, 0.665, 0.6978, 0.637]
-
 # MOTCat数据
 motcat_c_indexes = [0.6932, 0.6678, 0.6854, 0.7041, 0.6548]
 
-# MOTCat WiKG 01数据
-motcat_wikg01_c_indexes = [0.6629, 0.6664, 0.6925, 0.7062, 0.6580]
-
-# MOTCat WiKG TOP6数据
-motcat_wikg_top6_c_indexes = [0.6521, 0.6733, 0.6944, 0.7062, 0.6548]
-
-# MOTCat WiKG TOP10数据
-motcat_wikg_top10_c_indexes = [0.6723, 0.6712, 0.6944, 0.6825, 0.6580]
-
-# MOTCat WiKG TOP12数据
-motcat_wikg_top12_c_indexes = [0.6712, 0.6712, 0.6963, 0.7062, 0.6446]
-
-# MOTCat WiKG TOP24数据
-motcat_wikg_top24_c_indexes = [0.6698, 0.6821, 0.6861, 0.7069, 0.5518]
-
 # 计算平均值
 mean_mcat = np.mean(mcat_c_indexes)
-mean_wikg = np.mean(mcat_wikg_c_indexes)
 mean_motcat = np.mean(motcat_c_indexes)
-motcat_wikg01 = np.mean(motcat_wikg01_c_indexes)
-motcat_wikg_top6 = np.mean(motcat_wikg_top6_c_indexes)
-motcat_wikg_top10 = np.mean(motcat_wikg_top10_c_indexes)
-motcat_wikg_top12 = np.mean(motcat_wikg_top12_c_indexes)
-motcat_wikg_top24 = np.mean(motcat_wikg_top24_c_indexes)
 
 # 计算方差（使用NumPy的var函数，它默认计算的是样本方差，即除以n-1）
 std_mcat = np.std(mcat_c_indexes, ddof=1)
-std_mcat_wikg = np.std(mcat_wikg_c_indexes, ddof=1)
 std_motcat = np.std(motcat_c_indexes, ddof=1)
-std_motcat_wikg01 = np.std(motcat_wikg01_c_indexes, ddof=1)
-std_motcat_wikg_top6 = np.std(motcat_wikg_top6_c_indexes, ddof=1)
-std_motcat_wikg_top10 = np.std(motcat_wikg_top10_c_indexes, ddof=1)
-std_motcat_wikg_top12 = np.std(motcat_wikg_top12_c_indexes, ddof=1)
-std_motcat_wikg_top24 = np.std(motcat_wikg_top24_c_indexes, ddof=1)
 
 # 打印结果
 print(f"MCAT的平均值: {mean_mcat}")  # 0.67858
 print(f"MCAT的方差: {std_mcat}")
 print(f"MOTCat的平均值: {mean_motcat}")  # 0.681
 print(f"MOTCat的方差: {std_motcat}")
-print(f"MOTCat WiKG top24的平均值: {motcat_wikg_top24}")  # 0.6772
-print(f"MOTCat WiKG 24的方差: {std_motcat_wikg_top24}")
 
 
 def draw(filename):
@@ -141,7 +109,6 @@ def draw(filename):
     plt.legend()  # 显示图例
     plt.grid(True)  # 显示网格
     plt.show()  # 显示图形
-
 
 # file = r'C:\Users\Obliviate\Desktop\motcat_coattn\tcga_luad_s1\4\log.txt'
 # draw(filename=file)
