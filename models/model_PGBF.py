@@ -16,11 +16,11 @@ from models.model_utils import SNN_Block, Attn_Net_Gated
 ###########################
 class PGBF_Surv(nn.Module):
     def __init__(self,
-                 model_size_path: str = 'small', dropout=0.25,
+                 model_size_path: str = 'small', dropout=0.4,
                  model_size_omic: str = 'small', omic_sizes=None,
-                 topk=12,
-                 ot_impl="pot-uot-l2", ot_reg=0.1, ot_tau=0.5,
-                 n_classes=4, coattn_model="TMI_2024"):
+                 topk=30,
+                 ot_impl="pot-uot-l2", ot_reg=0.05, ot_tau=0.5,
+                 n_classes=4, coattn_model="MOTCat"):
         super(PGBF_Surv, self).__init__()
 
         ### omic encoder SNN
@@ -60,7 +60,7 @@ class PGBF_Surv(nn.Module):
         elif self.coattn_model == "MOTCat":
             self.coattn = OT_Attn_assem(impl=ot_impl, ot_reg=ot_reg, ot_tau=ot_tau)  # MOTCat
         elif self.coattn_model == "MCAT":
-            self.coattn = MultiheadAttention(embed_dim=size[1], num_heads=1)  # MCAT
+            self.coattn = MultiheadAttention(embed_dim=size[1], num_heads=8)  # MCAT
 
         ### path decoder
         path_encoder_layer = nn.TransformerEncoderLayer(d_model=256, nhead=8, dim_feedforward=512, dropout=dropout, activation='relu')
@@ -172,7 +172,8 @@ class PGBF_Surv(nn.Module):
             h_path_coattn = torch.mm(A_coattn.squeeze(), e_h.squeeze()).unsqueeze(1)
             # print('h_path_coattn.size():', h_path_coattn.size())
         elif self.coattn_model == "MCAT":
-            h_path_coattn, A_coattn = self.coattn(h_omic_bag, h_path_bag, h_path_bag)  # MCAT
+            # h_path_coattn, A_coattn = self.coattn(h_omic_bag.unsqueeze(1), h_path_bag.unsqueeze(1), h_path_bag.unsqueeze(1))  # MCAT
+            h_path_coattn, A_coattn = self.coattn(h_omic_bag.unsqueeze(1), e_h.permute(1, 0, 2), e_h.permute(1, 0, 2))  # MCAT
 
         ### path decoder
         # print('path decoder')

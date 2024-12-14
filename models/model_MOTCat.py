@@ -84,9 +84,9 @@ class OT_Attn_assem(nn.Module):
 #############################
 class MOTCAT_Surv(nn.Module):
     def __init__(self, fusion='concat', omic_sizes=[100, 200, 300, 400, 500, 600], n_classes=4,
-                 model_size_wsi: str = 'small', model_size_omic: str = 'small', dropout=0.25, ot_reg=0.1, ot_tau=0.5,
+                 model_size_wsi: str = 'small', model_size_omic: str = 'small', dropout=0.3, ot_reg=0.1, ot_tau=0.5,
                  ot_impl="pot-uot-l2",
-                 dim_in=1024, dim_hidden=256, topk=6):
+                 dim_in=1024, dim_hidden=256, topk=12):
         super(MOTCAT_Surv, self).__init__()
         self.fusion = fusion
         self.omic_sizes = omic_sizes

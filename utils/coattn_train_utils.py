@@ -145,7 +145,7 @@ def validate_survival_coattn(cur, epoch, model, loader, n_classes, early_stoppin
     c_index = concordance_index_censored((1-all_censorships).astype(bool), all_event_times, all_risk_scores, tied_tol=1e-08)[0]
 
     val_epoch_str = "val c-index: {:.4f}".format(c_index)
-    print(val_epoch_str)
+    print(val_epoch_str, 'val_loss:', val_loss, 'val_loss_surv:', val_loss_surv)
     with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
         f.write(val_epoch_str + '\n')
 

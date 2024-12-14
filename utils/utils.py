@@ -18,12 +18,14 @@ def nll_loss(hazards, S, Y, c, alpha=0.4, eps=1e-7):
     # after padding, S(0) = S[1], S(1) = S[2], etc, h(0) = h[0]
     #h[y] = h(1)
     #S[1] = S(1)
+    Y = Y.long()
     uncensored_loss = -(1 - c) * (torch.log(torch.gather(S_padded, 1, Y).clamp(min=eps)) + torch.log(
         torch.gather(hazards, 1, Y).clamp(min=eps)))
     censored_loss = - c * torch.log(torch.gather(S_padded, 1, Y + 1).clamp(min=eps))
     neg_l = censored_loss + uncensored_loss
     loss = (1 - alpha) * neg_l + alpha * uncensored_loss
-    loss = loss.mean()
+    # loss = loss.mean()
+    loss = loss.sum()
     return loss
 
 
