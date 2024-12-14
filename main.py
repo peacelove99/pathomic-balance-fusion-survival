@@ -105,6 +105,11 @@ def parse():
     parser.add_argument('--ot_impl', type=str,
                         default='pot-uot-l2', help='impl of ot (default: pot-uot-l2)')
 
+    parser.add_argument('--alpha', type=float,
+                        default=0.0001, help='impl of ot (default: pot-uot-l2)')
+
+
+
     return parser.parse_args()
 
 

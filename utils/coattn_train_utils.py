@@ -29,7 +29,7 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
         c = c.type(torch.FloatTensor).to(device)
 
         slide_id = data_loader.dataset.slide_data['slide_id'].iloc[batch_idx]
-        print('slide_id:', slide_id)  # debug slide_name
+        # print('slide_id:', slide_id)  # debug slide_name
 
         result, result_omic, result_path = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
 
@@ -73,8 +73,7 @@ def validate(epoch, data_loader, model, criterion, args, writer):
 
     patient_results = {}
 
-    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c) in enumerate(dataloader):
-
+    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c,slide_name) in enumerate(dataloader):
         data_WSI = data_WSI.to(device)
         data_omic1 = data_omic1.type(torch.FloatTensor).to(device)
         data_omic2 = data_omic2.type(torch.FloatTensor).to(device)
@@ -86,7 +85,7 @@ def validate(epoch, data_loader, model, criterion, args, writer):
         c = c.type(torch.FloatTensor).to(device)
 
         slide_id = data_loader.dataset.slide_data['slide_id'].iloc[batch_idx]
-        print('slide_id:', slide_id)  # debug slide_name
+        # print('slide_id:', slide_id)  # debug slide_name
 
         with torch.no_grad():
             result, result_omic, result_path = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
@@ -95,7 +94,7 @@ def validate(epoch, data_loader, model, criterion, args, writer):
         sim_loss_omic = criterion[1](result_omic['encoder'].detach(), result_omic['decoder'])
         sim_loss_path = criterion[1](result_path['encoder'].detach(), result_path['decoder'])
         loss = sur_loss + args.alpha * (sim_loss_omic + sim_loss_path)
-
+        val_loss += loss.item()
         # if reg_fn is None:
         #     loss_reg = 0
         # else:
@@ -128,4 +127,5 @@ def validate(epoch, data_loader, model, criterion, args, writer):
     #         print("Early stopping")
     #         return True
 
-    return patient_results, c_index
+    return c_index
+    # return patient_results, c_index

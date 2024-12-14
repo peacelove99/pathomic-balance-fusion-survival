@@ -108,14 +108,14 @@ class PGBF_Surv(nn.Module):
         h_omic_bag = torch.stack(h_omic)  # [6, 256]
         # print('h_omic_bag.size():', h_omic_bag.size())
         # Pathology Embedding
-        h_path_bag = self.pathomics_fc(x_path)  # [num_patch, 256]
+        h_path_bag = self.pathology_fc(x_path)  # [num_patch, 256]
         # print('h_path_bag.size():', h_path_bag.size())
 
         ### Encoder
         # genomics encoder
-        cls_token_genomics_encoder, patch_token_genomics_encoder = self.genomics_encoder(h_omic_bag)
+        cls_token_genomics_encoder, patch_token_genomics_encoder = self.encoder_omic(h_omic_bag.unsqueeze(0))
         # Pathology Encoder
-        cls_token_pathology_encoder, patch_token_pathology_encoder = self.pathomics_encoder(h_path_bag)
+        cls_token_pathology_encoder, patch_token_pathology_encoder = self.encoder_path(h_path_bag.unsqueeze(0))
 
         ### path graph
         if self.use_graph:
@@ -261,8 +261,8 @@ class PGBF_Surv(nn.Module):
 
         ### Survival Layer
         # print('Survival Layer')
-        # logits = self.classifier(h)  # .unsqueeze(0) # logits needs to be a [1 x 4] vector
-        logits = self.classifier(h).unsqueeze(0) # logits needs to be a [1 x 4] vector
+        logits = self.classifier(h)  # .unsqueeze(0) # logits needs to be a [1 x 4] vector
+        # logits = self.classifier(h).unsqueeze(0) # logits needs to be a [1 x 4] vector
         # print('logits.size():', logits.size())
         Y_hat = torch.topk(logits, 1, dim=1)[1]
         # print('Y_hat.size():', Y_hat.size())
@@ -271,15 +271,15 @@ class PGBF_Surv(nn.Module):
         S = torch.cumprod(1 - hazards, dim=1)
         # print('S.size():', S.size())
 
-        logits_omic = self.classifier(h_omic).unsqueeze(0)
-        hazards_omic = torch.sigmoid(logits_omic)
-        S_omic = torch.cumprod(1 - hazards_omic, dim=1)
+        # logits_omic = self.classifier(h_omic).unsqueeze(0)
+        # hazards_omic = torch.sigmoid(logits_omic)
+        # S_omic = torch.cumprod(1 - hazards_omic, dim=1)
+        #
+        # logits_path = self.classifier(h_path).unsqueeze(0)
+        # hazards_path = torch.sigmoid(logits_path)
+        # S_path = torch.cumprod(1 - hazards_path, dim=1)
 
-        logits_path = self.classifier(h_path).unsqueeze(0)
-        hazards_path = torch.sigmoid(logits_path)
-        S_path = torch.cumprod(1 - hazards_path, dim=1)
-
-        result = {'hazards': hazards_omic, 'S': S_omic}
+        result = {'hazards': hazards, 'S': S}
         # result_omic = {'hazards': hazards_omic, 'S': S_omic}
         # result_path = {'hazards': hazards_path, 'S': S_path}
         result_omic = {'encoder': cls_token_pathology_encoder, 'decoder': cls_token_pathology_decoder}

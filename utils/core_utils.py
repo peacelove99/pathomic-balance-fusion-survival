@@ -1,4 +1,5 @@
 import os
+from argparse import Namespace
 
 from datasets.dataset_generic import save_splits
 from models.model_MCAT import MCAT_Surv
@@ -112,7 +113,8 @@ def train(datasets: tuple, cur: int, args: Namespace):
 
     for epoch in range(args.start_epoch, args.max_epochs):
         train_loop(epoch, train_loader, model, loss_fn, optimizer, args, writer)
-        val_latest, c_index_val, stop = validate(epoch, val_loader, model, loss_fn, args, writer)
+        # val_latest, c_index_val, stop = validate(epoch, val_loader, model, loss_fn, args, writer)
+        c_index_val = validate(epoch, val_loader, model, loss_fn, args, writer)
 
         if c_index_val > max_c_index:
             max_c_index = c_index_val
@@ -120,7 +122,7 @@ def train(datasets: tuple, cur: int, args: Namespace):
             save_name = 's_{}_checkpoint'.format(cur)
 
             torch.save(model.state_dict(), os.path.join(args.results_dir, save_name + ".pt".format(cur)))
-            best_val_dict = val_latest
+            best_val_dict = c_index_val
 
     if args.log_data:
         writer.close()
