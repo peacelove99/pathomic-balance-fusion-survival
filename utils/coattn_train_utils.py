@@ -15,9 +15,9 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
     all_risk_scores = np.zeros((len(data_loader)))
     all_censorships = np.zeros((len(data_loader)))
     all_event_times = np.zeros((len(data_loader)))
-    dataloader = tqdm(data_loader, desc='Train Epoch: {}'.format(epoch))
+    # dataloader = tqdm(data_loader, desc='Train Epoch: {}'.format(epoch))
 
-    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c, slide_name) in enumerate(dataloader):
+    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c, slide_name) in enumerate(data_loader):
         data_WSI = data_WSI.to(device)
         data_omic1 = data_omic1.type(torch.FloatTensor).to(device)
         data_omic2 = data_omic2.type(torch.FloatTensor).to(device)
@@ -53,7 +53,7 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
         optimizer.step()
         optimizer.zero_grad()
 
-    train_loss /= len(dataloader)
+    train_loss /= len(data_loader)
     c_index = concordance_index_censored((1-all_censorships).astype(bool), all_event_times, all_risk_scores, tied_tol=1e-08)[0]
     print('Epoch: {}, train_loss: {:.4f}, train_c_index: {:.4f}'.format(epoch, train_loss, c_index))
 
@@ -69,11 +69,11 @@ def validate(epoch, data_loader, model, criterion, args, writer):
     all_risk_scores = np.zeros((len(data_loader)))
     all_censorships = np.zeros((len(data_loader)))
     all_event_times = np.zeros((len(data_loader)))
-    dataloader = tqdm(data_loader, desc='Test Epoch: {}'.format(epoch))
+    # dataloader = tqdm(data_loader, desc='Test Epoch: {}'.format(epoch))
 
     patient_results = {}
 
-    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c,slide_name) in enumerate(dataloader):
+    for batch_idx, (data_WSI, data_omic1, data_omic2, data_omic3, data_omic4, data_omic5, data_omic6, label, event_time, c,slide_name) in enumerate(data_loader):
         data_WSI = data_WSI.to(device)
         data_omic1 = data_omic1.type(torch.FloatTensor).to(device)
         data_omic2 = data_omic2.type(torch.FloatTensor).to(device)
@@ -107,7 +107,7 @@ def validate(epoch, data_loader, model, criterion, args, writer):
         patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'risk': risk, 'disc_label': label.item(),
                                            'survival': event_time.item(), 'censorship': c.item()}})
 
-    val_loss /= len(dataloader)
+    val_loss /= len(data_loader)
     c_index = concordance_index_censored((1-all_censorships).astype(bool), all_event_times, all_risk_scores, tied_tol=1e-08)[0]
 
     val_epoch_str = "val c-index: {:.4f}".format(c_index)
