@@ -161,7 +161,7 @@ class PGBF_Surv(nn.Module):
         print("omic_coattn.size():",omic_coattn.size())
         print("path_coattn.size():",path_coattn.size())
         if self.coattn_model == "TMI_2024":
-            genomics_in_pathology, Att = self.coattn(omic_coattn, path_coattn, path_coattn)  # genomics_in_pathology [1, 6, 256] G_coattn [8, 6, num_patch]
+            genomics_in_pathology, Att = self.coattn(omic_coattn.transpose(1, 0), path_coattn.transpose(1, 0), path_coattn.transpose(1, 0))  # genomics_in_pathology [1, 6, 256] G_coattn [8, 6, num_patch]
             print('genomics_in_pathology.size():', genomics_in_pathology.size())
             print('Attn.size():', Att.size())
         elif self.coattn_model == "MOTCat":
@@ -238,9 +238,9 @@ class PGBF_Surv(nn.Module):
 
         ### Survival Layer
         # print('Survival Layer')
-        logits = self.classifier(h)  # .unsqueeze(0) # logits needs to be a [1 x 4] vector
+        logits = self.classifier(h).unsqueeze(0) # logits needs to be a [1 x 4] vector
         # print('logits.size():', logits.size())
-        Y_hat = torch.topk(logits, 1, dim=1)[1]
+        Y_hat = torch.topk(logits, 1, dim=-1)[1]
         # print('Y_hat.size():', Y_hat.size())
         hazards = torch.sigmoid(logits)
         # print('hazards.size():', hazards.size())

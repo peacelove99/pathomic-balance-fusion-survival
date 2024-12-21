@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 import numpy as np
 import torch
 from timeit import default_timer as timer
@@ -17,7 +17,7 @@ def parse():
     parser = argparse.ArgumentParser(description='Configurations for Survival Analysis on TCGA Data.')
 
     parser.add_argument('--seed', type=int,
-                        default=1, help='Random seed for reproducible experiment (default: 1)')
+                        default=2024, help='Random seed for reproducible experiment (default: 1)')
 
     parser.add_argument('--task', type=str,
                         default='tcga_luad', help='Which cancer type within ./splits/<which_splits> to use for training. Used synonymously for "task" (Default: tcga_luad)')
@@ -88,19 +88,19 @@ def parse():
                         default=0, help='start_epoch.')
 
     parser.add_argument('--max_epochs', type=int,
-                        default=20, help='Maximum number of epochs to train (default: 20)')
+                        default=1, help='Maximum number of epochs to train (default: 20)')
 
-    parser.add_argument('--lambda_reg', type=float,
-                        default=1e-4, help='L1-Regularization Strength (Default 1e-4)')
-
-    parser.add_argument('--gc', type=int,
-                        default=32, help='Gradient Accumulation Step.')
-
-    parser.add_argument('--ot_reg', type=float,
-                        default=0.05, help='epsilon of OT (default: 0.1)')
-
-    parser.add_argument('--ot_tau', type=float,
-                        default=0.5, help='tau of UOT (default: 0.5)')
+    # parser.add_argument('--lambda_reg', type=float,
+    #                     default=1e-4, help='L1-Regularization Strength (Default 1e-4)')
+    #
+    # parser.add_argument('--gc', type=int,
+    #                     default=32, help='Gradient Accumulation Step.')
+    #
+    # parser.add_argument('--ot_reg', type=float,
+    #                     default=0.05, help='epsilon of OT (default: 0.1)')
+    #
+    # parser.add_argument('--ot_tau', type=float,
+    #                     default=0.5, help='tau of UOT (default: 0.5)')
 
     parser.add_argument('--ot_impl', type=str,
                         default='pot-uot-l2', help='impl of ot (default: pot-uot-l2)')
