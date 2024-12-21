@@ -56,7 +56,7 @@ class MCAT_Surv(nn.Module):
         self.sig_networks = nn.ModuleList(sig_networks)
 
         ### Multihead Attention
-        self.coattn = MultiheadAttention(embed_dim=256, num_heads=1)
+        self.coattn = MultiHeadAttention_MCAT(embed_dim=256, num_heads=1)
 
         ### Path Transformer + Attention Head
         path_encoder_layer = nn.TransformerEncoderLayer(d_model=256, nhead=8, dim_feedforward=512, dropout=dropout, activation='relu')
@@ -532,7 +532,7 @@ from torch.nn.parameter import Parameter
 from torch.nn import Module
 
 
-class MultiheadAttention(Module):
+class MultiHeadAttention_MCAT(Module):
     r"""Allows the model to jointly attend to information
     from different representation subspaces.
     See reference: Attention Is All You Need
@@ -557,7 +557,7 @@ class MultiheadAttention(Module):
 
     Examples::
 
-        >>> multihead_attn = nn.MultiheadAttention(embed_dim, num_heads)
+        >>> multihead_attn = nn.MultiHeadAttention_MCAT(embed_dim, num_heads)
         >>> attn_output, attn_output_weights = multihead_attn(query, key, value)
     """
     bias_k: Optional[torch.Tensor]
@@ -565,7 +565,7 @@ class MultiheadAttention(Module):
 
     def __init__(self, embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None,
                  vdim=None):
-        super(MultiheadAttention, self).__init__()
+        super(MultiHeadAttention_MCAT, self).__init__()
         self.embed_dim = embed_dim
         self.kdim = kdim if kdim is not None else embed_dim
         self.vdim = vdim if vdim is not None else embed_dim
@@ -624,7 +624,7 @@ class MultiheadAttention(Module):
         if '_qkv_same_embed_dim' not in state:
             state['_qkv_same_embed_dim'] = True
 
-        super(MultiheadAttention, self).__setstate__(state)
+        super(MultiHeadAttention_MCAT, self).__setstate__(state)
 
     def forward(self, query, key, value, key_padding_mask=None,
                 need_weights=True, need_raw=True, attn_mask=None):

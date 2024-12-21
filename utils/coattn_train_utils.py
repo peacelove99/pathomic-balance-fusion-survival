@@ -110,8 +110,8 @@ def validate(epoch, data_loader, model, criterion, args, writer):
     val_loss /= len(data_loader)
     c_index = concordance_index_censored((1-all_censorships).astype(bool), all_event_times, all_risk_scores, tied_tol=1e-08)[0]
 
-    val_epoch_str = "val c-index: {:.4f}".format(c_index)
-    print(val_epoch_str, 'val_loss:', val_loss)
+    val_epoch_str = "val c-index: {:.4f}".format(c_index) + "val loss: {:.6f}".format(val_loss)
+    print(val_epoch_str)
     with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
         f.write(val_epoch_str + '\n')
 

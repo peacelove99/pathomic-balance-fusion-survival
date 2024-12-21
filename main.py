@@ -45,11 +45,11 @@ def parse():
                         default=True, help='Use genomic features as signature embeddings.')
 
     parser.add_argument('--data_root_dir', type=str,
-                        # default='/home/cvnlp/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
-                        default='/media/lenovo/D2B96B35B0D939DD/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        default='/home/cvnlp/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        # default='/media/lenovo/D2B96B35B0D939DD/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
 
     parser.add_argument('--log_data', action='store_true',
-                        default=True, help='Log data using tensorboard')
+                        default=False, help='Log data using tensorboard')
 
     parser.add_argument('--loss', type=str, choices=['ce_surv', 'nll_surv', 'nll_surv_kl', 'nll_surv_mse', 'nll_surv_l1', 'nll_surv_cos', 'nll_surv_ol'],
                         default='nll_surv_l1', help='slide-level classification loss function (default: ce)')
@@ -113,7 +113,7 @@ def parse():
     return parser.parse_args()
 
 
-def seed_torch(seed=7):
+def seed_torch(seed=2024):
     import random
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -198,10 +198,20 @@ def main(args):
     for i, k in enumerate(summary_all_folds):
         c_index = summary_all_folds[k]['result'][0]
         print("Fold {}, C-Index: {:.4f}".format(k, c_index))
+        with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
+            f.write("Fold {}, C-Index: {:.4f}\n".format(k, c_index))
         result_cindex.append(c_index)
     result_cindex = np.array(result_cindex)
     print("Avg C-Index of {} folds: {:.3f}, stdp: {:.3f}, stds: {:.3f}".format(
         len(summary_all_folds), result_cindex.mean(), result_cindex.std(), result_cindex.std(ddof=1)))
+
+    with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
+        for attr, value in vars(args).items():
+            f.write(f"{attr.replace('_', ' ').capitalize()}: {value}\n")
+        f.write("Avg C-Index of {} folds: {:.3f}, stdp: {:.3f}, stds: {:.3f}\n".format(
+        len(summary_all_folds), result_cindex.mean(), result_cindex.std(), result_cindex.std(ddof=1)))
+
+    return result_cindex.mean()
 
     # results_latest_df = pd.DataFrame({'folds': folds, 'val_cindex': latest_val_cindex})
     # save_name = 'summary.csv'
@@ -218,13 +228,13 @@ if __name__ == "__main__":
         os.mkdir(args.results_dir)
     print("结果目录:", args.results_dir)
 
-    model_set = args.model_type + '_' + args.mode
-    experiment_set = args.task + '_s{}'.format(args.seed)
-
-    args.results_dir = os.path.join(args.results_dir, args.which_splits, model_set, experiment_set)
-    if not os.path.isdir(args.results_dir):
-        os.makedirs(args.results_dir)
-    print("结果子目录:", args.results_dir)
+    # model_set = args.model_type + '_' + args.mode
+    # experiment_set = args.task + '_s{}'.format(args.seed)
+    #
+    # args.results_dir = os.path.join(args.results_dir, args.which_splits, model_set, experiment_set)
+    # if not os.path.isdir(args.results_dir):
+    #     os.makedirs(args.results_dir)
+    # print("结果子目录:", args.results_dir)
 
     if ('summary_latest.csv' in os.listdir(args.results_dir)) and (not args.overwrite):  # 防止重复实验
         print("Exp Code <%s> already exists! Exiting script." % args.exp_code)
@@ -234,7 +244,41 @@ if __name__ == "__main__":
     print("数据分割目录:", args.split_dir)
 ########################################################################################################################
 
-    main(args)
+    best_rest = 0
+    best_set = ""
+
+    for a in [0, 1]:
+        args.omic_encoder = a
+        for b in [0, 1, 2]:
+            args.path_encoder = b
+            for c in ["TMI_2024", "MOTCat", "MCAT", "CMTA"]:
+                args.coattn_model = c
+                for d in [0, 1, 2, 3]:
+                    args.path_decoder = d
+                    for e in [0, 1, 2]:
+                        args.omic_decoder = e
+                        for f in [0, 1]:
+                            args.fusion_layer = f
+                            for g in [6, 12, 18, 24, 30]:
+                                args.topk = g
+                                for h in [0.05, 0.1]:
+                                    args.ot_reg = h
+                                    for i in [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]:
+                                        args.dropout = i
+
+                                        experiment_set = f"{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h:.2f}_{i:.2f}"
+                                        args.results_dir = os.path.join(args.results_dir, experiment_set)
+                                        if not os.path.isdir(args.results_dir):
+                                            os.makedirs(args.results_dir)
+
+
+                                        result = main(args)
+                                        if result > best_rest:
+                                            best_rest = result
+                                            best_set = experiment_set
+    print('best_rest', best_rest)
+    print('best_set', best_set)
+
 
     end = timer()
     print("finished!")

@@ -41,7 +41,7 @@ class GraphMixer_Surv(torch.nn.Module):
                 sig_networks.append(nn.Sequential(*fc_omic))
             self.sig_networks = nn.ModuleList(sig_networks)
 
-            self.coattn = MultiHeadAttention(in_features=hidden_dim, head_num=8)
+            self.coattn = MultiHeadAttention_TMI_2024(in_features=hidden_dim, head_num=8)
 
         self.classifier = nn.Linear(hidden_dim, n_classes)
 
@@ -138,7 +138,7 @@ class ScaledDotProductAttention(nn.Module):
         return attention.matmul(value), scores
 
 
-class MultiHeadAttention(nn.Module):
+class MultiHeadAttention_TMI_2024(nn.Module):
 
     def __init__(self,
                  in_features,
@@ -151,7 +151,7 @@ class MultiHeadAttention(nn.Module):
         :param bias: Whether to use the bias term.
         :param activation: The activation after each linear transformation.
         """
-        super(MultiHeadAttention, self).__init__()
+        super(MultiHeadAttention_TMI_2024, self).__init__()
         if in_features % head_num != 0:
             raise ValueError('`in_features`({}) should be divisible by `head_num`({})'.format(in_features, head_num))
         self.in_features = in_features

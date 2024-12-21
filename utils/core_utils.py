@@ -43,13 +43,6 @@ def train(datasets: tuple, cur: int, args: Namespace):
     from utils.loss import define_loss
     loss_fn = define_loss(args)
 
-    if args.reg_type == 'omic':
-        reg_fn = l1_reg_all
-    elif args.reg_type == 'pathomic':
-        reg_fn = l1_reg_modules
-    else:
-        reg_fn = None
-
     print('Done!')
     ########################################################################################################################
     print('\nInit Model...', end=' ')
@@ -67,7 +60,7 @@ def train(datasets: tuple, cur: int, args: Namespace):
         model_dict = {'num_layers': args.num_gcn_layers, 'edge_agg': args.edge_agg, 'resample': args.resample, 'n_classes': args.n_classes, 'omic_sizes': train_split.omic_sizes, 'num_features': args.input_dim}
         model = GraphMixer_Surv(**model_dict)
     elif args.model_type == 'pgbf':
-        model_dict = {'omic_sizes': args.omic_sizes}
+        model_dict = {'omic_sizes': args.omic_sizes, 'args': args}
         model = PGBF_Surv(**model_dict)
     else:
         raise NotImplementedError
@@ -90,21 +83,6 @@ def train(datasets: tuple, cur: int, args: Namespace):
 
     print('Done!')
     ########################################################################################################################
-    print('\nSetup EarlyStopping...', end=' ')
-
-    if args.early_stopping:
-        early_stopping = EarlyStopping(warmup=0, patience=10, stop_epoch=30, verbose=True)
-    else:
-        early_stopping = None
-
-    print('Done!')
-    ########################################################################################################################
-    print('\nSetup Validation C-Index Monitor...', end=' ')
-
-    monitor_cindex = Monitor_CIndex()
-
-    print('Done!')
-    ########################################################################################################################
     print("running with {} {}".format(args.model_type, args.mode))
 
     max_c_index = 0.
@@ -113,15 +91,13 @@ def train(datasets: tuple, cur: int, args: Namespace):
 
     for epoch in range(args.start_epoch, args.max_epochs):
         train_loop(epoch, train_loader, model, loss_fn, optimizer, args, writer)
-        # val_latest, c_index_val, stop = validate(epoch, val_loader, model, loss_fn, args, writer)
         c_index_val = validate(epoch, val_loader, model, loss_fn, args, writer)
 
         if c_index_val > max_c_index:
             max_c_index = c_index_val
             epoch_max_c_index = epoch
-            save_name = 's_{}_checkpoint'.format(cur)
-
-            torch.save(model.state_dict(), os.path.join(args.results_dir, save_name + ".pt".format(cur)))
+            # save_name = 's_{}_checkpoint'.format(cur)
+            # torch.save(model.state_dict(), os.path.join(args.results_dir, save_name + ".pt".format(cur)))
             best_val_dict = c_index_val
 
     if args.log_data:
