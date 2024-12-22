@@ -19,14 +19,14 @@ class PGBF_Surv01(nn.Module):
                  n_classes=4, args=None
                  ):
         super(PGBF_Surv01, self).__init__()
-        self.coattn_model = args.coattn_model  # ["MOTCat", "CMTA"]
-        self.path_decoder = args.path_decoder  # [0, 1, 2, 3]
-        self.omic_decoder = args.omic_decoder  # [0, 1, 2]
-        self.fusion_layer = args.fusion_layer  # [0, 1]
-        topk = args.topk  # [6, 12, 18, 24, 30]
-        ot_reg = args.ot_reg  # [0.05, 0.1]
-        ot_tau = 0.5  #
-        dropout = args.dropout  # [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+        self.coattn_model = "CMTA"  # args.coattn_model  # ["MOTCat", "CMTA"]
+        self.path_decoder = 0  # args.path_decoder  # [0, 1, 2, 3]
+        self.omic_decoder = 0  # args.omic_decoder  # [0, 1, 2]
+        self.fusion_layer = 2  # args.fusion_layer  # [0, 1]
+        topk = 30  # args.topk  # [6, 12, 18, 24, 30]
+        # ot_reg = args.ot_reg  # [0.05, 0.1]
+        # ot_tau = 0.5  #
+        dropout = 0.4  # args.dropout  # [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
 
         ### Genomic Embedding
         if omic_sizes is None:
@@ -151,8 +151,8 @@ class PGBF_Surv01(nn.Module):
             print('genomics_in_pathology.size():', genomics_in_pathology.size())
         elif self.coattn_model == "CMTA":
             pathology_in_genomics, Att = self.P_in_G_Att(path_coattn, omic_coattn, omic_coattn)  # [num_patch, 1, 256]
-            # print('pathology_in_genomics.size():', pathology_in_genomics.size())
-            # print('Attn.size():', Att.size())
+            print('pathology_in_genomics.size():', pathology_in_genomics.size())
+            print('Attn.size():', Att.size())
             genomics_in_pathology, Att = self.G_in_P_Att(omic_coattn, path_coattn, path_coattn)  # [6, 1, 256]
             print('genomics_in_pathology.size():', genomics_in_pathology.size())
             print('Attn.size():', Att.size())
@@ -160,42 +160,31 @@ class PGBF_Surv01(nn.Module):
         ### path decoder
         # print('path decoder')
         # print("genomics_in_pathology.size():", genomics_in_pathology.size())
-        path_decoder = self.path_decoder
+        path_decoder = 4
         if path_decoder == 0:
-            A_path, h_path = self.path_attention_head(genomics_in_pathology)  # TMI_2024
-            # print('A_path.size():', A_path.size(), 'h_path.size():', h_path.size())
-            A_path = A_path.squeeze(0)
-            h_path = torch.mm(F.softmax(A_path.transpose(1, 0), dim=1), h_path.squeeze(0))  # [1, 256]
-            cls_token_pathology_decoder = self.path_rho(h_path)  # [1,256]
-        elif path_decoder == 1:
-            h_path_trans = self.path_transformer(genomics_in_pathology)  # MCAT & MOTCat
-            # print('h_path_trans.size():', h_path_trans.size())
+            h_path_trans = self.path_transformer(pathology_in_genomics)  # MCAT & MOTCat
             A_path, h_path = self.path_attention_head(h_path_trans.squeeze(1))
-            # print('A_path.size():', A_path.size(), 'h_path.size():', h_path.size())
             h_path = torch.mm(F.softmax(A_path.transpose(1, 0), dim=1), h_path)  # [1, 256]
             cls_token_pathology_decoder = self.path_rho(h_path)  # [1,256]
-        elif path_decoder == 2:
-            cls_token_pathology_decoder, _ = self.decoder_path(genomics_in_pathology.transpose(1, 0))  # [1, 256]
+        elif path_decoder == 1:
+            cls_token_pathology_decoder, _ = self.decoder_path(pathology_in_genomics.transpose(1, 0))  # [1, 256]
             # print('cls_token_pathology_decoder.size():', cls_token_pathology_decoder.size())
-        elif path_decoder == 3:
-            cls_token_pathology_decoder, _ = self.decoder_omic(genomics_in_pathology.transpose(1, 0))  # [1, 256]
+        elif path_decoder == 2:
+            cls_token_pathology_decoder, _ = self.decoder_omic(pathology_in_genomics.transpose(1, 0))  # [1, 256]
             # print('cls_token_pathology_decoder.size():', cls_token_pathology_decoder.size())
 
         ### omic decoder
-        if self.coattn_model == "CMTA":
-            h_omic_bag = pathology_in_genomics
         # print('omic decoder')
-        omic_decoder = self.omic_decoder
+        omic_decoder = 4
         if omic_decoder == 0:
-            h_omic_trans = self.omic_transformer(h_omic_bag)  # MCAT & MOTCat [6, 256]
+            h_omic_trans = self.omic_transformer(genomics_in_pathology)  # MCAT & MOTCat [6, 256]
             A_omic, h_omic = self.omic_attention_head(h_omic_trans.squeeze(1))  # [6, 1] [6, 256]
-            A_omic = torch.transpose(A_omic, 1, 0)  # [1, 6]
-            h_omic = torch.mm(F.softmax(A_omic, dim=1), h_omic)  # [1, 256]
+            h_omic = torch.mm(F.softmax(A_omic.transpose(1, 0), dim=1), h_omic)  # [1, 256]
             cls_token_genomics_decoder = self.omic_rho(h_omic)  # [1, 256]
         elif omic_decoder == 1:
-            cls_token_genomics_decoder, _ = self.decoder_omic(h_omic_bag.transpose(1, 0))  # [1, 256]
+            cls_token_genomics_decoder, _ = self.decoder_omic(genomics_in_pathology.transpose(1, 0))  # [1, 256]
         elif omic_decoder == 2:
-            cls_token_genomics_decoder, _ = self.decoder_path(h_omic_bag.transpose(1, 0))  # [1, 256]
+            cls_token_genomics_decoder, _ = self.decoder_path(genomics_in_pathology.transpose(1, 0))  # [1, 256]
 
         ### Fusion Layer
         # print('Fusion Layer')
@@ -204,7 +193,7 @@ class PGBF_Surv01(nn.Module):
             h = cls_token_pathology_decoder
         elif fusion_layer == 1:
             h = self.mm(torch.cat([cls_token_pathology_decoder, cls_token_genomics_decoder], axis=-1))  # MCAT & MOTCat
-        elif omic_encoder == 1 and path_encoder == 2:
+        elif fusion_layer == 2:
             h = self.mm(
                 torch.concat((
                         (cls_token_pathology_encoder + cls_token_pathology_decoder) / 2,
