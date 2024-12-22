@@ -11,6 +11,15 @@ from models.model_MOTCat import OT_Attn_assem
 from models.model_tmi2024 import MultiHeadAttention_TMI_2024
 from models.model_utils import SNN_Block, Attn_Net_Gated
 
+def compute_attn_logit_blockwise(e_h, e_t, block_size):
+    num_patches = e_h.size(1)
+    attn_logit = []
+    for start in range(0, num_patches, block_size):
+        end = min(start + block_size, num_patches)
+        block_e_t = e_t[:, start:end, :]
+        block_attn = (e_h * (256 ** -0.5)) @ block_e_t.transpose(-2, -1)
+        attn_logit.append(block_attn)
+    return torch.cat(attn_logit, dim=-1)  # 拼接分块结果
 
 ###########################
 ### PGBF Implementation ###
@@ -115,15 +124,15 @@ class PGBF_Surv(nn.Module):
         ### Encoder
         # Genomic Encoder
         omic_encoder = self.omic_encoder
+        # if omic_encoder == 0:
+        #     patch_token_genomics_encoder = h_omic_bag.unsqueeze(0)  # [1, 6, 256]
         if omic_encoder == 0:
-            patch_token_genomics_encoder = h_omic_bag.unsqueeze(0)  # [1, 6, 256]
-        elif omic_encoder == 1:
             cls_token_genomics_encoder, patch_token_genomics_encoder = self.encoder_omic(h_omic_bag.unsqueeze(0))  # [1, 256]  [1, 6, 256]
         # Pathology Encoder
         path_encoder = self.path_encoder
+        # if path_encoder == 0:
+        #     patch_token_pathology_encoder = h_path_bag.unsqueeze(0)  # [1, 6, 256]
         if path_encoder == 0:
-            patch_token_pathology_encoder = h_path_bag.unsqueeze(0)  # [1, 6, 256]
-        elif path_encoder == 1:
             # WiKG 公式1 每个补丁的嵌入投影为头部和尾部嵌入
             e_h = self.W_head(h_path_bag.unsqueeze(0))  # embedding_head [1, num_patch, 256]
             e_t = self.W_tail(h_path_bag.unsqueeze(0))  # embedding_tail [1, num_patch, 256]
@@ -151,59 +160,60 @@ class PGBF_Surv(nn.Module):
             e_h = sum_embedding + bi_embedding  # [1, num_patch, 256]
             # WiKG 公式 9 生成 graph-level 嵌入 embedding_graph
             patch_token_pathology_encoder = self.message_dropout(e_h)  # [1, num_patch, 256]
-        elif path_encoder == 2:
+            cls_token_pathology_encoder = self.readout(patch_token_pathology_encoder.squeeze(0), batch=None)
+        elif path_encoder == 1:
             cls_token_pathology_encoder, patch_token_pathology_encoder = self.encoder_path(h_path_bag.unsqueeze(0))  # [1, 256] [1, num_patch, 256]
 
         ### coattn graph & omic
         # print(self.coattn_model, 'coattn')
         omic_coattn = patch_token_genomics_encoder.transpose(1, 0)
         path_coattn = patch_token_pathology_encoder.transpose(1, 0)
-        print("omic_coattn.size():",omic_coattn.size())
-        print("path_coattn.size():",path_coattn.size())
+        # print("omic_coattn.size():",omic_coattn.size())
+        # print("path_coattn.size():",path_coattn.size())
         if self.coattn_model == "TMI_2024":
             genomics_in_pathology, Att = self.coattn(omic_coattn.transpose(1, 0), path_coattn.transpose(1, 0), path_coattn.transpose(1, 0))  # genomics_in_pathology [1, 6, 256] G_coattn [8, 6, num_patch]
-            print('genomics_in_pathology.size():', genomics_in_pathology.size())
-            print('Attn.size():', Att.size())
+            # print('genomics_in_pathology.size():', genomics_in_pathology.size())
+            # print('Attn.size():', Att.size())
         elif self.coattn_model == "MOTCat":
             Att, _ = self.coattn(path_coattn, omic_coattn)  # [1, 1, 6, num_patch]
-            print('Attn.size():', Att.size())
+            # print('Attn.size():', Att.size())
             genomics_in_pathology = torch.mm(Att.squeeze(), patch_token_pathology_encoder.squeeze())  # [1, 6, num_patch]
-            print('genomics_in_pathology.size():', genomics_in_pathology.size())
+            # print('genomics_in_pathology.size():', genomics_in_pathology.size())
         elif self.coattn_model == "MCAT":
             genomics_in_pathology, Att = self.coattn(omic_coattn, path_coattn, path_coattn)  # MCAT
-            print('genomics_in_pathology.size():', genomics_in_pathology.size())
-            print('Attn.size():', Att.size())
+            # print('genomics_in_pathology.size():', genomics_in_pathology.size())
+            # print('Attn.size():', Att.size())
         elif self.coattn_model == "CMTA":
             pathology_in_genomics, Att = self.P_in_G_Att(path_coattn, omic_coattn, omic_coattn)  # [num_patch, 1, 256]
-            print('pathology_in_genomics.size():', pathology_in_genomics.size())
-            print('Attn.size():', Att.size())
+            # print('pathology_in_genomics.size():', pathology_in_genomics.size())
+            # print('Attn.size():', Att.size())
             genomics_in_pathology, Att = self.G_in_P_Att(omic_coattn, path_coattn, path_coattn)  # [6, 1, 256]
-            print('genomics_in_pathology.size():', genomics_in_pathology.size())
-            print('Attn.size():', Att.size())
+            # print('genomics_in_pathology.size():', genomics_in_pathology.size())
+            # print('Attn.size():', Att.size())
 
         ### path decoder
         # print('path decoder')
-        print("genomics_in_pathology.size():", genomics_in_pathology.size())
+        # print("genomics_in_pathology.size():", genomics_in_pathology.size())
         path_decoder = self.path_decoder
         if path_decoder == 0:
             A_path, h_path = self.path_attention_head(genomics_in_pathology)  # TMI_2024
-            print('A_path.size():', A_path.size(), 'h_path.size():', h_path.size())
+            # print('A_path.size():', A_path.size(), 'h_path.size():', h_path.size())
             A_path = A_path.squeeze(0)
             h_path = torch.mm(F.softmax(A_path.transpose(1, 0), dim=1), h_path.squeeze(0))  # [1, 256]
-            cls_token_pathology_decoder = self.path_rho(h_path).squeeze()  # [256]
+            cls_token_pathology_decoder = self.path_rho(h_path)  # [1,256]
         elif path_decoder == 1:
             h_path_trans = self.path_transformer(genomics_in_pathology)  # MCAT & MOTCat
-            print('h_path_trans.size():', h_path_trans.size())
+            # print('h_path_trans.size():', h_path_trans.size())
             A_path, h_path = self.path_attention_head(h_path_trans.squeeze(1))
-            print('A_path.size():', A_path.size(), 'h_path.size():', h_path.size())
+            # print('A_path.size():', A_path.size(), 'h_path.size():', h_path.size())
             h_path = torch.mm(F.softmax(A_path.transpose(1, 0), dim=1), h_path)  # [1, 256]
-            cls_token_pathology_decoder = self.path_rho(h_path)  # [256]
+            cls_token_pathology_decoder = self.path_rho(h_path)  # [1,256]
         elif path_decoder == 2:
             cls_token_pathology_decoder, _ = self.decoder_path(genomics_in_pathology.transpose(1, 0))  # [1, 256]
-            print('cls_token_pathology_decoder.size():', cls_token_pathology_decoder.size())
+            # print('cls_token_pathology_decoder.size():', cls_token_pathology_decoder.size())
         elif path_decoder == 3:
             cls_token_pathology_decoder, _ = self.decoder_omic(genomics_in_pathology.transpose(1, 0))  # [1, 256]
-            print('cls_token_pathology_decoder.size():', cls_token_pathology_decoder.size())
+            # print('cls_token_pathology_decoder.size():', cls_token_pathology_decoder.size())
 
         ### omic decoder
         if self.coattn_model == "CMTA":
@@ -215,7 +225,7 @@ class PGBF_Surv(nn.Module):
             A_omic, h_omic = self.omic_attention_head(h_omic_trans.squeeze(1))  # [6, 1] [6, 256]
             A_omic = torch.transpose(A_omic, 1, 0)  # [1, 6]
             h_omic = torch.mm(F.softmax(A_omic, dim=1), h_omic)  # [1, 256]
-            cls_token_genomics_decoder = self.omic_rho(h_omic)  # [256]
+            cls_token_genomics_decoder = self.omic_rho(h_omic)  # [1, 256]
         elif omic_decoder == 1:
             cls_token_genomics_decoder, _ = self.decoder_omic(h_omic_bag.transpose(1, 0))  # [1, 256]
         elif omic_decoder == 2:
@@ -234,11 +244,11 @@ class PGBF_Surv(nn.Module):
                         (cls_token_pathology_encoder + cls_token_pathology_decoder) / 2,
                         (cls_token_genomics_encoder + cls_token_genomics_decoder) / 2,
                     ), dim=1,))
-        print(self.coattn_model, 'h.size():', h.size())
+        # print(self.coattn_model, 'h.size():', h.size())
 
         ### Survival Layer
         # print('Survival Layer')
-        logits = self.classifier(h).unsqueeze(0) # logits needs to be a [1 x 4] vector
+        logits = self.classifier(h) # logits needs to be a [1 x 4] vector
         # print('logits.size():', logits.size())
         Y_hat = torch.topk(logits, 1, dim=-1)[1]
         # print('Y_hat.size():', Y_hat.size())
@@ -256,8 +266,8 @@ class PGBF_Surv(nn.Module):
         S_path = torch.cumprod(1 - hazards_path, dim=1)
 
         result = {'hazards': hazards, 'S': S}
-        result_omic = {'hazards': hazards_omic, 'S': S_omic}
-        result_path = {'hazards': hazards_path, 'S': S_path}
+        result_omic = {'encoder': cls_token_genomics_encoder, 'decoder': cls_token_genomics_decoder}
+        result_path = {'encoder': cls_token_pathology_encoder, 'decoder': cls_token_pathology_decoder}
 
         # attention_scores = {'coattn': A_coattn, 'path': A_path, 'omic': A_omic}
 

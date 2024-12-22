@@ -1,6 +1,9 @@
 import argparse
 import os
 import sys
+
+import pandas as pd
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 import numpy as np
 import torch
@@ -22,7 +25,7 @@ def parse():
     parser.add_argument('--task', type=str,
                         default='tcga_luad', help='Which cancer type within ./splits/<which_splits> to use for training. Used synonymously for "task" (Default: tcga_luad)')
 
-    parser.add_argument('--results_dir', type=str,
+    parser.add_argument('--results_dir0', type=str,
                         default='./results', help='Results directory (Default: ./results)')
 
     parser.add_argument('--which_splits', type=str,
@@ -51,8 +54,8 @@ def parse():
     parser.add_argument('--log_data', action='store_true',
                         default=False, help='Log data using tensorboard')
 
-    parser.add_argument('--loss', type=str, choices=['ce_surv', 'nll_surv', 'nll_surv_kl', 'nll_surv_mse', 'nll_surv_l1', 'nll_surv_cos', 'nll_surv_ol'],
-                        default='nll_surv_l1', help='slide-level classification loss function (default: ce)')
+    # parser.add_argument('--loss', type=str, choices=['ce_surv', 'nll_surv', 'nll_surv_kl', 'nll_surv_mse', 'nll_surv_l1', 'nll_surv_cos', 'nll_surv_ol'],
+    #                     default='nll_surv_l1', help='slide-level classification loss function (default: ce)')
 
     parser.add_argument('--alpha_surv', type=float,
                         default=0.0, help='How much to weigh uncensored patients')
@@ -88,7 +91,7 @@ def parse():
                         default=0, help='start_epoch.')
 
     parser.add_argument('--max_epochs', type=int,
-                        default=1, help='Maximum number of epochs to train (default: 20)')
+                        default=30, help='Maximum number of epochs to train (default: 20)')
 
     # parser.add_argument('--lambda_reg', type=float,
     #                     default=1e-4, help='L1-Regularization Strength (Default 1e-4)')
@@ -106,7 +109,7 @@ def parse():
                         default='pot-uot-l2', help='impl of ot (default: pot-uot-l2)')
 
     parser.add_argument('--alpha', type=float,
-                        default=0.0001, help='impl of ot (default: pot-uot-l2)')
+                        default=0.0001)
 
 
 
@@ -198,35 +201,36 @@ def main(args):
     for i, k in enumerate(summary_all_folds):
         c_index = summary_all_folds[k]['result'][0]
         print("Fold {}, C-Index: {:.4f}".format(k, c_index))
-        with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
+        with open(os.path.join(args.results_dir, 'log.txt'), 'a') as f:
             f.write("Fold {}, C-Index: {:.4f}\n".format(k, c_index))
         result_cindex.append(c_index)
     result_cindex = np.array(result_cindex)
     print("Avg C-Index of {} folds: {:.3f}, stdp: {:.3f}, stds: {:.3f}".format(
         len(summary_all_folds), result_cindex.mean(), result_cindex.std(), result_cindex.std(ddof=1)))
 
-    with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
+    with open(os.path.join(args.results_dir0, 'log.txt'), 'a') as f:
+        f.write(args.results_dir + "\n")
         for attr, value in vars(args).items():
             f.write(f"{attr.replace('_', ' ').capitalize()}: {value}\n")
         f.write("Avg C-Index of {} folds: {:.3f}, stdp: {:.3f}, stds: {:.3f}\n".format(
         len(summary_all_folds), result_cindex.mean(), result_cindex.std(), result_cindex.std(ddof=1)))
 
-    return result_cindex.mean()
 
     # results_latest_df = pd.DataFrame({'folds': folds, 'val_cindex': latest_val_cindex})
-    # save_name = 'summary.csv'
+    # save_name = 'summary_latest.csv'
     #
-    # results_latest_df.to_csv(os.path.join(args.results_dir, 'summary_latest.csv'))
+    # results_latest_df.to_csv(os.path.join(args.results_dir, save_name))
 
+    return result_cindex.mean()
 
 if __name__ == "__main__":
     start = timer()
 
     args = parse()
 ########################################################################################################################
-    if not os.path.isdir(args.results_dir):
-        os.mkdir(args.results_dir)
-    print("结果目录:", args.results_dir)
+    if not os.path.isdir(args.results_dir0):
+        os.mkdir(args.results_dir0)
+    print("结果目录:", args.results_dir0)
 
     # model_set = args.model_type + '_' + args.mode
     # experiment_set = args.task + '_s{}'.format(args.seed)
@@ -236,9 +240,9 @@ if __name__ == "__main__":
     #     os.makedirs(args.results_dir)
     # print("结果子目录:", args.results_dir)
 
-    if ('summary_latest.csv' in os.listdir(args.results_dir)) and (not args.overwrite):  # 防止重复实验
-        print("Exp Code <%s> already exists! Exiting script." % args.exp_code)
-        sys.exit()
+    # if ('summary_latest.csv' in os.listdir(args.results_dir)) and (not args.overwrite):  # 防止重复实验
+    #     print("Exp Code <%s> already exists! Exiting script." % args.exp_code)
+    #     sys.exit()
 
     args.split_dir = os.path.join('./splits', args.which_splits, args.task)
     print("数据分割目录:", args.split_dir)
@@ -247,9 +251,9 @@ if __name__ == "__main__":
     best_rest = 0
     best_set = ""
 
-    for a in [0, 1]:
+    for a in [0]:
         args.omic_encoder = a
-        for b in [0, 1, 2]:
+        for b in [0, 1]:
             args.path_encoder = b
             for c in ["TMI_2024", "MOTCat", "MCAT", "CMTA"]:
                 args.coattn_model = c
@@ -265,17 +269,22 @@ if __name__ == "__main__":
                                     args.ot_reg = h
                                     for i in [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]:
                                         args.dropout = i
+                                        for j in ["nll_surv_kl", "nll_surv_mse", "nll_surv_l1", "nll_surv_cos", "nll_surv_ol"]:
+                                            args.loss = j
 
-                                        experiment_set = f"{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h:.2f}_{i:.2f}"
-                                        args.results_dir = os.path.join(args.results_dir, experiment_set)
-                                        if not os.path.isdir(args.results_dir):
-                                            os.makedirs(args.results_dir)
+                                            experiment_set = f"{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h:.2f}_{i:.2f}_{j}"
+                                            args.results_dir = os.path.join(args.results_dir0, experiment_set)
+                                            if not os.path.isdir(args.results_dir):
+                                                os.makedirs(args.results_dir)
 
+                                            if ('log.txt' in os.listdir(args.results_dir)):  # 防止重复实验
+                                                print("Exp Code <%s> already exists! Exiting script." % experiment_set)
+                                                continue
 
-                                        result = main(args)
-                                        if result > best_rest:
-                                            best_rest = result
-                                            best_set = experiment_set
+                                            result = main(args)
+                                            if result > best_rest:
+                                                best_rest = result
+                                                best_set = experiment_set
     print('best_rest', best_rest)
     print('best_set', best_set)
 

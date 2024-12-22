@@ -28,15 +28,21 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
         label = label.type(torch.LongTensor).to(device)
         c = c.type(torch.FloatTensor).to(device)
 
-        slide_id = data_loader.dataset.slide_data['slide_id'].iloc[batch_idx]
-        # print('slide_id:', slide_id)  # debug slide_name
+        # slide_id = data_loader.dataset.slide_data['slide_id'].iloc[batch_idx]
+        # print('slide_id:', slide_name)  # debug slide_name
+        # print(data_WSI.size())
+        # print()
 
         result, result_omic, result_path = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
 
         sur_loss = criterion[0](hazards=result['hazards'], S=result['S'], Y=label, c=c)
-        sim_loss_omic = criterion[1](result_omic['encoder'].detach(), result_omic['decoder'])
-        sim_loss_path = criterion[1](result_path['encoder'].detach(), result_path['decoder'])
-        loss = sur_loss + args.alpha * (sim_loss_omic + sim_loss_path)
+        if args.loss == "nll_surv_ol":
+            sim_loss = criterion[1](result_path['encoder'].detach(), result_path['decoder'], result_omic['encoder'].detach(), result_omic['decoder'])
+            loss = sur_loss + args.alpha * sim_loss
+        else:
+            sim_loss_omic = criterion[1](result_omic['encoder'].detach(), result_omic['decoder'])
+            sim_loss_path = criterion[1](result_path['encoder'].detach(), result_path['decoder'])
+            loss = sur_loss + args.alpha * (sim_loss_omic + sim_loss_path)
         train_loss += loss.item()
 
         # if reg_fn is None:
@@ -55,7 +61,7 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
 
     train_loss /= len(data_loader)
     c_index = concordance_index_censored((1-all_censorships).astype(bool), all_event_times, all_risk_scores, tied_tol=1e-08)[0]
-    print('Epoch: {}, train_loss: {:.4f}, train_c_index: {:.4f}'.format(epoch, train_loss, c_index))
+    print('Epoch: {}, train_loss: {:.4f}, train_c_index: {:.4f},'.format(epoch, train_loss, c_index), end=' ')
 
     if writer:
         writer.add_scalar('train/loss', train_loss, epoch)
@@ -85,15 +91,21 @@ def validate(epoch, data_loader, model, criterion, args, writer):
         c = c.type(torch.FloatTensor).to(device)
 
         slide_id = data_loader.dataset.slide_data['slide_id'].iloc[batch_idx]
-        # print('slide_id:', slide_id)  # debug slide_name
+        # print('slide_id:', slide_name)  # debug slide_name
+        # print(data_WSI.size())
+        # print()
 
         with torch.no_grad():
             result, result_omic, result_path = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
 
         sur_loss = criterion[0](hazards=result['hazards'], S=result['S'], Y=label, c=c)
-        sim_loss_omic = criterion[1](result_omic['encoder'].detach(), result_omic['decoder'])
-        sim_loss_path = criterion[1](result_path['encoder'].detach(), result_path['decoder'])
-        loss = sur_loss + args.alpha * (sim_loss_omic + sim_loss_path)
+        if args.loss == "nll_surv_ol":
+            sim_loss = criterion[1](result_path['encoder'].detach(), result_path['decoder'], result_omic['encoder'].detach(), result_omic['decoder'])
+            loss = sur_loss + args.alpha * sim_loss
+        else:
+            sim_loss_omic = criterion[1](result_omic['encoder'].detach(), result_omic['decoder'])
+            sim_loss_path = criterion[1](result_path['encoder'].detach(), result_path['decoder'])
+            loss = sur_loss + args.alpha * (sim_loss_omic + sim_loss_path)
         val_loss += loss.item()
         # if reg_fn is None:
         #     loss_reg = 0
@@ -110,7 +122,7 @@ def validate(epoch, data_loader, model, criterion, args, writer):
     val_loss /= len(data_loader)
     c_index = concordance_index_censored((1-all_censorships).astype(bool), all_event_times, all_risk_scores, tied_tol=1e-08)[0]
 
-    val_epoch_str = "val c-index: {:.4f}".format(c_index) + "val loss: {:.6f}".format(val_loss)
+    val_epoch_str = "val_loss: {:.4f}, ".format(val_loss) + "val_c_index: {:.6f}".format(c_index)
     print(val_epoch_str)
     with open(os.path.join(args.writer_dir, 'log.txt'), 'a') as f:
         f.write(val_epoch_str + '\n')

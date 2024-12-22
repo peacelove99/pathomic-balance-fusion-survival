@@ -87,6 +87,15 @@ class Generic_WSI_Survival_Dataset(Dataset):
                              'TCGA-49-6742-01Z-00-DX2.2c6b4df0-867d-40c5-8bee-14e2d219224b.svs',  # [61791, 1024]
                              'TCGA-49-6743-01Z-00-DX4.5ea81023-1372-48ed-88a8-374e2394d7f7.svs',  # [95344, 1024]
                              'TCGA-49-6743-01Z-00-DX3.d391f3ab-e954-4f4f-996d-cd0420933ccf.svs',  # [82289, 1024]
+                             'TCGA-73-4658-01Z-00-DX1.d5beb44f-9d76-485a-8af4-407b0f1a610e.svs',  # [48475, 1024]
+                             'TCGA-49-6744-01Z-00-DX2.1982e585-65a4-4330-9140-ccabcdd106f8.svs',  # [45030, 1024]
+                             'TCGA-49-4488-01Z-00-DX2.ce896a98-8b45-4606-8849-3a377b81e3de.svs',  # [46359, 1024]
+                             'TCGA-50-5055-01Z-00-DX2.446EC3BB-2ED7-4253-8A39-AC68331F08E7.svs',  # [45859, 1024]
+                             'TCGA-49-4514-01Z-00-DX3.3b247c08-3069-4100-9df4-734895adb954.svs',  # [46187, 1024]
+                             'TCGA-49-4506-01Z-00-DX2.81e180ae-bd9f-49cc-9a0f-297800cc7280.svs',  # [44241, 1024]
+                             'TCGA-J2-8192-01Z-00-DX1.A784F381-7906-480F-99A1-0B88005953A0.svs',  # [46565, 1024]
+                             'TCGA-MN-A4N1-01Z-00-DX2.9B0852C4-16BF-4962-B86F-E2570E48A89E.svs',  # [48475, 1024]
+                             'TCGA-49-6743-01Z-00-DX2.f6b71e89-19ff-4d9b-a3f1-3a52949f1dc7.svs',  # [55361, 1024]
                              ]
         slide_data.drop(slide_data[slide_data['slide_id'].isin(missing_slides_ls)].index, inplace=True)
 

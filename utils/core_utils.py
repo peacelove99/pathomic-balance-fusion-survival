@@ -66,7 +66,7 @@ def train(datasets: tuple, cur: int, args: Namespace):
         raise NotImplementedError
 
     model = model.to(device)
-    print_network(model)
+    # print_network(model)
 
     print('Done!')
     ########################################################################################################################
