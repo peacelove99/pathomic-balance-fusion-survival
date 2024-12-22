@@ -5,6 +5,7 @@ from datasets.dataset_generic import save_splits
 from models.model_MCAT import MCAT_Surv
 from models.model_MOTCat import MOTCAT_Surv
 from models.model_PGBF import PGBF_Surv
+from models.model_PGBF01 import PGBF_Surv01
 from models.model_tmi2024 import GraphMixer_Surv
 from utils.coattn_train_utils import *
 from utils.utils import *
@@ -62,6 +63,9 @@ def train(datasets: tuple, cur: int, args: Namespace):
     elif args.model_type == 'pgbf':
         model_dict = {'omic_sizes': args.omic_sizes, 'args': args}
         model = PGBF_Surv(**model_dict)
+    elif args.model_type == 'pgbf01':
+        model_dict = {'omic_sizes': args.omic_sizes, 'args': args}
+        model = PGBF_Surv01(**model_dict)
     else:
         raise NotImplementedError
 

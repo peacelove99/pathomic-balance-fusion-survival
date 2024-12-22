@@ -11,16 +11,6 @@ from models.model_MOTCat import OT_Attn_assem
 from models.model_tmi2024 import MultiHeadAttention_TMI_2024
 from models.model_utils import SNN_Block, Attn_Net_Gated
 
-def compute_attn_logit_blockwise(e_h, e_t, block_size):
-    num_patches = e_h.size(1)
-    attn_logit = []
-    for start in range(0, num_patches, block_size):
-        end = min(start + block_size, num_patches)
-        block_e_t = e_t[:, start:end, :]
-        block_attn = (e_h * (256 ** -0.5)) @ block_e_t.transpose(-2, -1)
-        attn_logit.append(block_attn)
-    return torch.cat(attn_logit, dim=-1)  # 拼接分块结果
-
 ###########################
 ### PGBF Implementation ###
 ###########################
