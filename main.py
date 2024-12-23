@@ -4,7 +4,7 @@ import sys
 
 import pandas as pd
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 import numpy as np
 import torch
 from timeit import default_timer as timer
@@ -31,8 +31,8 @@ def parse():
     parser.add_argument('--which_splits', type=str,
                         default='5foldcv', help='Which splits folder to use in ./splits/ (Default: ./splits/5foldcv')
 
-    parser.add_argument('--model_type', type=str, choices=['snn', 'amil', 'mcat', 'motcat', 'pgbf'],
-                        default='pgbf', help='Type of model (Default: pgbf)')
+    parser.add_argument('--model_type', type=str, choices=['snn', 'amil', 'mcat', 'motcat', 'pgbf', 'pgbf01'],
+                        default='pgbf01', help='Type of model (Default: pgbf)')
 
     parser.add_argument('--mode', type=str, choices=['omic', 'path', 'pathomic', 'cluster', 'coattn'],
                         default='coattn', help='Specifies which modalities to use / collate function in dataloader.')
@@ -248,46 +248,52 @@ if __name__ == "__main__":
     print("数据分割目录:", args.split_dir)
 ########################################################################################################################
 
-    best_rest = 0
-    best_set = ""
+    # best_rest = 0
+    # best_set = ""
+    #
+    # for a in [0]:
+    #     args.omic_encoder = a
+    #     for b in [0, 1]:
+    #         args.path_encoder = b
+    #         for c in ["TMI_2024", "MOTCat", "MCAT", "CMTA"]:
+    #             args.coattn_model = c
+    #             for d in [0, 1, 2, 3]:
+    #                 args.path_decoder = d
+    #                 for e in [0, 1, 2]:
+    #                     args.omic_decoder = e
+    #                     for f in [0, 1]:
+    #                         args.fusion_layer = f
+    #                         for g in [6, 12, 18, 24, 30]:
+    #                             args.topk = g
+    #                             for h in [0.05, 0.1]:
+    #                                 args.ot_reg = h
+    #                                 for i in [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]:
+    #                                     args.dropout = i
+    #                                     for j in ["nll_surv_kl", "nll_surv_mse", "nll_surv_l1", "nll_surv_cos", "nll_surv_ol"]:
+    #                                         args.loss = j
+    #
+    #                                         experiment_set = f"{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h:.2f}_{i:.2f}_{j}"
+    #                                         args.results_dir = os.path.join(args.results_dir0, experiment_set)
+    #                                         if not os.path.isdir(args.results_dir):
+    #                                             os.makedirs(args.results_dir)
+    #
+    #                                         if ('log.txt' in os.listdir(args.results_dir)):  # 防止重复实验
+    #                                             print("Exp Code <%s> already exists! Exiting script." % experiment_set)
+    #                                             continue
+    #
+    #                                         result = main(args)
+    #                                         if result > best_rest:
+    #                                             best_rest = result
+    #                                             best_set = experiment_set
+    # print('best_rest', best_rest)
+    # print('best_set', best_set)
 
-    for a in [0]:
-        args.omic_encoder = a
-        for b in [0, 1]:
-            args.path_encoder = b
-            for c in ["TMI_2024", "MOTCat", "MCAT", "CMTA"]:
-                args.coattn_model = c
-                for d in [0, 1, 2, 3]:
-                    args.path_decoder = d
-                    for e in [0, 1, 2]:
-                        args.omic_decoder = e
-                        for f in [0, 1]:
-                            args.fusion_layer = f
-                            for g in [6, 12, 18, 24, 30]:
-                                args.topk = g
-                                for h in [0.05, 0.1]:
-                                    args.ot_reg = h
-                                    for i in [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]:
-                                        args.dropout = i
-                                        for j in ["nll_surv_kl", "nll_surv_mse", "nll_surv_l1", "nll_surv_cos", "nll_surv_ol"]:
-                                            args.loss = j
-
-                                            experiment_set = f"{a}_{b}_{c}_{d}_{e}_{f}_{g}_{h:.2f}_{i:.2f}_{j}"
-                                            args.results_dir = os.path.join(args.results_dir0, experiment_set)
-                                            if not os.path.isdir(args.results_dir):
-                                                os.makedirs(args.results_dir)
-
-                                            if ('log.txt' in os.listdir(args.results_dir)):  # 防止重复实验
-                                                print("Exp Code <%s> already exists! Exiting script." % experiment_set)
-                                                continue
-
-                                            result = main(args)
-                                            if result > best_rest:
-                                                best_rest = result
-                                                best_set = experiment_set
-    print('best_rest', best_rest)
-    print('best_set', best_set)
-
+    experiment_set = "pgbf01_CMTA_0_0_2_30"
+    args.loss = "nll_surv_l1"
+    args.results_dir = os.path.join(args.results_dir0, experiment_set)
+    if not os.path.isdir(args.results_dir):
+        os.makedirs(args.results_dir)
+    main(args)
 
     end = timer()
     print("finished!")

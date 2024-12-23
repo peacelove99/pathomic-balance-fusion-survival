@@ -71,8 +71,8 @@ class PGBF_Surv01(nn.Module):
         if self.coattn_model == "MOTCat":
             self.coattn = OT_Attn_assem(impl=ot_impl, ot_reg=ot_reg, ot_tau=ot_tau)  # MOTCat
         elif self.coattn_model == "CMTA":
-            self.P_in_G_Att = MultiheadAttention_CMTA(embed_dim=256, num_heads=6)  # P->G Attention
-            self.G_in_P_Att = MultiheadAttention_CMTA(embed_dim=256, num_heads=6)  # G->P Attention
+            self.P_in_G_Att = MultiheadAttention_CMTA(embed_dim=256, num_heads=8)  # P->G Attention
+            self.G_in_P_Att = MultiheadAttention_CMTA(embed_dim=256, num_heads=8)  # G->P Attention
 
         ### path decoder
         path_encoder_layer = nn.TransformerEncoderLayer(d_model=256, nhead=8, dim_feedforward=512, dropout=dropout, activation='relu')
@@ -148,19 +148,19 @@ class PGBF_Surv01(nn.Module):
             Att, _ = self.coattn(path_coattn, omic_coattn)  # [1, 1, 6, num_patch]
             # print('Attn.size():', Att.size())
             genomics_in_pathology = torch.mm(Att.squeeze(), patch_token_pathology_encoder.squeeze())  # [1, 6, num_patch]
-            print('genomics_in_pathology.size():', genomics_in_pathology.size())
+            # print('genomics_in_pathology.size():', genomics_in_pathology.size())
         elif self.coattn_model == "CMTA":
             pathology_in_genomics, Att = self.P_in_G_Att(path_coattn, omic_coattn, omic_coattn)  # [num_patch, 1, 256]
-            print('pathology_in_genomics.size():', pathology_in_genomics.size())
-            print('Attn.size():', Att.size())
+            # print('pathology_in_genomics.size():', pathology_in_genomics.size())
+            # print('Attn.size():', Att.size())
             genomics_in_pathology, Att = self.G_in_P_Att(omic_coattn, path_coattn, path_coattn)  # [6, 1, 256]
-            print('genomics_in_pathology.size():', genomics_in_pathology.size())
-            print('Attn.size():', Att.size())
+            # print('genomics_in_pathology.size():', genomics_in_pathology.size())
+            # print('Attn.size():', Att.size())
 
         ### path decoder
         # print('path decoder')
         # print("genomics_in_pathology.size():", genomics_in_pathology.size())
-        path_decoder = 4
+        path_decoder = self.path_decoder
         if path_decoder == 0:
             h_path_trans = self.path_transformer(pathology_in_genomics)  # MCAT & MOTCat
             A_path, h_path = self.path_attention_head(h_path_trans.squeeze(1))
@@ -175,7 +175,7 @@ class PGBF_Surv01(nn.Module):
 
         ### omic decoder
         # print('omic decoder')
-        omic_decoder = 4
+        omic_decoder = self.omic_decoder
         if omic_decoder == 0:
             h_omic_trans = self.omic_transformer(genomics_in_pathology)  # MCAT & MOTCat [6, 256]
             A_omic, h_omic = self.omic_attention_head(h_omic_trans.squeeze(1))  # [6, 1] [6, 256]
@@ -227,5 +227,5 @@ class PGBF_Surv01(nn.Module):
         # attention_scores = {'coattn': A_coattn, 'path': A_path, 'omic': A_omic}
 
         # return hazards, S, Y_hat, attention_scores, h_path, h_omic
-        # return result, result_omic, result_path
+        return result, result_omic, result_path
 
