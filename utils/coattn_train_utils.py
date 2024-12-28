@@ -56,6 +56,36 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
         all_event_times[batch_idx] = event_time
 
         loss.backward()
+
+        logits_omic = (torch.mm(result_omic['encoder'], torch.transpose(model.module.classifier.weight, 0, 1)) + model.module.classifier.bias)
+        hazards_omic = torch.sigmoid(logits_omic)
+        S_omic = torch.cumprod(1 - hazards_omic, dim=1)
+        risk_omic = -torch.sum(S_omic, dim=1).detach().cpu().numpy()
+
+        logits_path = (torch.mm(result_path['encoder'], torch.transpose(model.module.classifier.weight, 0, 1)) + model.module.classifier.bias)
+        hazards_path = torch.sigmoid(logits_path)
+        S_path = torch.cumprod(1 - hazards_path, dim=1)
+        risk_path = -torch.sum(S_path, dim=1).detach().cpu().numpy()
+
+        ratio_omic = risk_omic / risk_path
+        ratio_path = 1 / ratio_omic
+
+        relu = nn.ReLU(inplace=True)
+        tanh = nn.Tanh()
+        if ratio_omic > 1:
+            coeff_omic = 1 - tanh(args.alpha * relu(ratio_omic))
+            coeff_path = 1
+        else:
+            coeff_path = 1 - tanh(args.alpha * relu(ratio_path))
+            coeff_omic = 1
+
+        if 2 <= epoch <= 20:
+            for name, parms in model.named_parameters():
+                if 'omic' in name:
+                    parms.grad *= coeff_omic
+                if 'path' in name:
+                    parms.grad *= coeff_path
+
         optimizer.step()
         optimizer.zero_grad()
 

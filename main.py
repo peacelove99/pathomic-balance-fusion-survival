@@ -38,11 +38,11 @@ def parse():
                         default='coattn', help='Specifies which modalities to use / collate function in dataloader.')
 
     parser.add_argument('--k', type=int,
-                        default=5, help='Number of folds (default: 5)')
+                        default=1, help='Number of folds (default: 5)')
     parser.add_argument('--k_start', type=int,
-                        default=-1, help='Start fold (Default: -1, first fold)')
+                        default=4, help='Start fold (Default: -1, first fold)')
     parser.add_argument('--k_end', type=int,
-                        default=-1, help='End fold (Default: -1, last fold)')
+                        default=5, help='End fold (Default: -1, last fold)')
 
     parser.add_argument('--apply_sig', action='store_true',
                         default=True, help='Use genomic features as signature embeddings.')
