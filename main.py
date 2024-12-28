@@ -288,7 +288,7 @@ if __name__ == "__main__":
     # print('best_rest', best_rest)
     # print('best_set', best_set)
 
-    experiment_set = "pgbf01_CMTA_0_0_2_30"
+    experiment_set = "pgbf01_CMTA_0_0_2_30_OGM"
     args.loss = "nll_surv_l1"
     args.results_dir = os.path.join(args.results_dir0, experiment_set)
     if not os.path.isdir(args.results_dir):

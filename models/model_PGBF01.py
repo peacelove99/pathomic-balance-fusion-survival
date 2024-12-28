@@ -22,7 +22,7 @@ class PGBF_Surv01(nn.Module):
         self.coattn_model = "CMTA"  # args.coattn_model  # ["MOTCat", "CMTA"]
         self.path_decoder = 0  # args.path_decoder  # [0, 1, 2, 3]
         self.omic_decoder = 0  # args.omic_decoder  # [0, 1, 2]
-        self.fusion_layer = 1  # args.fusion_layer  # [0, 1]
+        self.fusion_layer = 2  # args.fusion_layer  # [0, 1]
         topk = 30  # args.topk  # [6, 12, 18, 24, 30]
         # ot_reg = args.ot_reg  # [0.05, 0.1]
         # ot_tau = 0.5  #

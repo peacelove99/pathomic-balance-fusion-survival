@@ -103,6 +103,7 @@ class Generic_WSI_Survival_Dataset(Dataset):
                              'TCGA-MN-A4N4-01Z-00-DX2.9550732D-8FB1-43D9-B094-7C0CD310E9C0.svs',  # [41912, 1024]
                              'TCGA-78-8640-01Z-00-DX1.6F929E56-34D5-45A6-8A9E-ACB4B88A68B1.svs',  # [37307, 1024]
                              'TCGA-50-5066-02Z-00-DX1.A2CA045A-7956-4E04-9EC9-5856FC789110.svs',  # [38112, 1024]
+                             'TCGA-NJ-A4YF-01Z-00-DX1.4A3DE76A-9F1E-4766-A013-5E7E3A665071.svs',  # [36141, 1024]
                              ]
         slide_data.drop(slide_data[slide_data['slide_id'].isin(missing_slides_ls)].index, inplace=True)
 
