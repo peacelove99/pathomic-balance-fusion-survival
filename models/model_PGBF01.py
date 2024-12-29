@@ -113,26 +113,33 @@ class PGBF_Surv01(nn.Module):
         e_h = self.W_head(h_path_bag.unsqueeze(0))  # embedding_head [1, num_patch, 256]
         e_t = self.W_tail(h_path_bag.unsqueeze(0))  # embedding_tail [1, num_patch, 256]
         # WiKG 公式2 3 相似性得分最高的前 k 个补丁被选为补丁 i 的邻居
-        # attn_logit = (e_h * self.scale) @ e_t.transpose(-2, -1)  # 计算 e_h 和 e_t 之间的相似性(点积) [1, num_patch, num_patch]
-        # topk_weight, topk_index = torch.topk(attn_logit, k=self.topk, dim=-1)  # 获取 Top - k 注意力分数和对应索引 [1, num_patch, topk]
         num_patch = e_h.size(1)
-        topk_weight = torch.full((1, num_patch, self.topk), float('-inf'), device=e_h.device)
-        topk_index = torch.full((1, num_patch, self.topk), -1, dtype=torch.long, device=e_h.device)
-
-        for i in range(num_patch):
-            scores = (e_h[:, i, :] * self.scale) @ e_t.transpose(-2, -1)  # 计算当前行的相似性
-            topk_vals, topk_inds = torch.topk(scores, self.topk, dim=-1)  # 获取当前行的 Top-K
-            # 更新 Top-K
-            topk_weight[:, i, :] = topk_vals
-            topk_index[:, i, :] = topk_inds
-
+        if num_patch < 50000:
+            attn_logit = (e_h * self.scale) @ e_t.transpose(-2, -1)  # 计算 e_h 和 e_t 之间的相似性(点积) [1, num_patch, num_patch]
+            topk_weight, topk_index = torch.topk(attn_logit, k=self.topk, dim=-1)  # 获取 Top - k 注意力分数和对应索引 [1, num_patch, topk]
+        else:
+            topk_weight = torch.full((1, num_patch, self.topk), float('-inf'), device=e_h.device)
+            topk_index = torch.full((1, num_patch, self.topk), -1, dtype=torch.long, device=e_h.device)
+            for i in range(num_patch):
+                scores = (e_h[:, i, :] * self.scale) @ e_t.transpose(-2, -1)  # 计算当前行的相似性
+                topk_vals, topk_inds = torch.topk(scores, self.topk, dim=-1)  # 获取当前行的 Top-K
+                # 更新 Top-K
+                topk_weight[:, i, :] = topk_vals
+                topk_index[:, i, :] = topk_inds
         topk_prob = F.softmax(topk_weight, dim=-1)  # 归一化注意力分数 [1, num_patch, topk]
         topk_index = topk_index.to(torch.long)  # 转换索引类型 [1, num_patch, topk]
         topk_index_expanded = topk_index.expand(e_t.size(0), -1, -1)  # 扩展索引以匹配 e_t 维度 [1, num_patch, topk]
         batch_indices = torch.arange(e_t.size(0)).view(-1, 1, 1).to(topk_index.device)  # 创建批次索引辅助张量 [1, 1, 1]
         Nb_h = e_t[batch_indices, topk_index_expanded, :]  # 使用索引从 e_t 中提取特征向量 neighbors_head [1, num_patch, topk, 256]
         # WiKG 公式 4 为有向边分配嵌入 embedding head_r
-        eh_r = torch.mul(topk_prob.unsqueeze(-1), Nb_h) + torch.matmul((1 - topk_prob).unsqueeze(-1), e_h.unsqueeze(2))  # [1, num_patch, topk, 256]
+
+        # 减少操作次数，先预计算权重后的 Nb_h 和 e_h
+        weighted_Nb_h = topk_prob.unsqueeze(-1) * Nb_h
+        weighted_e_h = (1 - topk_prob).unsqueeze(-1) * e_h.unsqueeze(2)
+        # 直接累加得到 eh_r
+        eh_r = weighted_Nb_h + weighted_e_h
+
+        # eh_r = torch.mul(topk_prob.unsqueeze(-1), Nb_h) + torch.matmul((1 - topk_prob).unsqueeze(-1), e_h.unsqueeze(2))  # [1, num_patch, topk, 256]
         # WiKG 公式 6 计算 加权因子
         e_h_expand = e_h.unsqueeze(2).expand(-1, -1, self.topk, -1)  # [1, num_patch, topk, 256]
         gate = torch.tanh(e_h_expand + eh_r)  # [1, num_patch, topk, 256]
@@ -222,14 +229,6 @@ class PGBF_Surv01(nn.Module):
         # print('hazards.size():', hazards.size())
         S = torch.cumprod(1 - hazards, dim=1)
         # print('S.size():', S.size())
-
-        # logits_omic = self.classifier(cls_token_genomics_decoder).unsqueeze(0)
-        # hazards_omic = torch.sigmoid(logits_omic)
-        # S_omic = torch.cumprod(1 - hazards_omic, dim=1)
-        #
-        # logits_path = self.classifier(cls_token_pathology_decoder).unsqueeze(0)
-        # hazards_path = torch.sigmoid(logits_path)
-        # S_path = torch.cumprod(1 - hazards_path, dim=1)
 
         result = {'hazards': hazards, 'S': S}
         result_omic = {'encoder': cls_token_genomics_encoder, 'decoder': cls_token_genomics_decoder}
