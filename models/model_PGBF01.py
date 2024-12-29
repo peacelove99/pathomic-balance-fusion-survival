@@ -113,8 +113,19 @@ class PGBF_Surv01(nn.Module):
         e_h = self.W_head(h_path_bag.unsqueeze(0))  # embedding_head [1, num_patch, 256]
         e_t = self.W_tail(h_path_bag.unsqueeze(0))  # embedding_tail [1, num_patch, 256]
         # WiKG 公式2 3 相似性得分最高的前 k 个补丁被选为补丁 i 的邻居
-        attn_logit = (e_h * self.scale) @ e_t.transpose(-2, -1)  # 计算 e_h 和 e_t 之间的相似性(点积) [1, num_patch, num_patch]
-        topk_weight, topk_index = torch.topk(attn_logit, k=self.topk, dim=-1)  # 获取 Top - k 注意力分数和对应索引 [1, num_patch, topk]
+        # attn_logit = (e_h * self.scale) @ e_t.transpose(-2, -1)  # 计算 e_h 和 e_t 之间的相似性(点积) [1, num_patch, num_patch]
+        # topk_weight, topk_index = torch.topk(attn_logit, k=self.topk, dim=-1)  # 获取 Top - k 注意力分数和对应索引 [1, num_patch, topk]
+        num_patch = e_h.size(1)
+        topk_weight = torch.full((1, num_patch, self.topk), float('-inf'), device=e_h.device)
+        topk_index = torch.full((1, num_patch, self.topk), -1, dtype=torch.long, device=e_h.device)
+
+        for i in range(num_patch):
+            scores = (e_h[:, i, :] * self.scale) @ e_t.transpose(-2, -1)  # 计算当前行的相似性
+            topk_vals, topk_inds = torch.topk(scores, self.topk, dim=-1)  # 获取当前行的 Top-K
+            # 更新 Top-K
+            topk_weight[:, i, :] = topk_vals
+            topk_index[:, i, :] = topk_inds
+
         topk_prob = F.softmax(topk_weight, dim=-1)  # 归一化注意力分数 [1, num_patch, topk]
         topk_index = topk_index.to(torch.long)  # 转换索引类型 [1, num_patch, topk]
         topk_index_expanded = topk_index.expand(e_t.size(0), -1, -1)  # 扩展索引以匹配 e_t 维度 [1, num_patch, topk]
