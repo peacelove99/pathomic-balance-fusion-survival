@@ -38,11 +38,11 @@ def parse():
                         default='coattn', help='Specifies which modalities to use / collate function in dataloader.')
 
     parser.add_argument('--k', type=int,
-                        default=1, help='Number of folds (default: 5)')
+                        default=5, help='Number of folds (default: 5)')
     parser.add_argument('--k_start', type=int,
-                        default=4, help='Start fold (Default: -1, first fold)')
+                        default=-1, help='Start fold (Default: -1, first fold)')
     parser.add_argument('--k_end', type=int,
-                        default=5, help='End fold (Default: -1, last fold)')
+                        default=-1, help='End fold (Default: -1, last fold)')
 
     parser.add_argument('--apply_sig', action='store_true',
                         default=True, help='Use genomic features as signature embeddings.')
@@ -91,7 +91,7 @@ def parse():
                         default=0, help='start_epoch.')
 
     parser.add_argument('--max_epochs', type=int,
-                        default=30, help='Maximum number of epochs to train (default: 20)')
+                        default=10, help='Maximum number of epochs to train (default: 20)')
 
     # parser.add_argument('--lambda_reg', type=float,
     #                     default=1e-4, help='L1-Regularization Strength (Default 1e-4)')
@@ -288,7 +288,7 @@ if __name__ == "__main__":
     # print('best_rest', best_rest)
     # print('best_set', best_set)
 
-    experiment_set = "pgbf01_CMTA_0_0_2_30_OGM"
+    experiment_set = "pgbf01_CMTA_0_0_2_18_OGM"
     args.loss = "nll_surv_l1"
     args.results_dir = os.path.join(args.results_dir0, experiment_set)
     if not os.path.isdir(args.results_dir):

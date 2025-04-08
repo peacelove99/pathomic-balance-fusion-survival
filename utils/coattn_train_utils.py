@@ -30,9 +30,9 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
         c = c.type(torch.FloatTensor).to(device)
 
         # slide_id = data_loader.dataset.slide_data['slide_id'].iloc[batch_idx]
-        # print('slide_id:', slide_name)  # debug slide_name
-        # print(data_WSI.size())
-        # print()
+        print('slide_id:', slide_name)  # debug slide_name
+        print(data_WSI.size())
+        print()
 
         result, result_omic, result_path = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
 
@@ -58,7 +58,7 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
 
         loss.backward()
 
-        if 0 <= epoch <= 20:
+        if 5 <= epoch <= 20:
             logits_omic = (torch.mm(result_omic['encoder'].detach(), torch.transpose(model.classifier.weight, 0, 1)) + model.classifier.bias)
             hazards_omic = torch.sigmoid(logits_omic)
             S_omic = torch.cumprod(1 - hazards_omic, dim=1)
@@ -129,9 +129,9 @@ def validate(epoch, data_loader, model, criterion, args, writer):
         c = c.type(torch.FloatTensor).to(device)
 
         slide_id = data_loader.dataset.slide_data['slide_id'].iloc[batch_idx]
-        # print('slide_id:', slide_name)  # debug slide_name
-        # print(data_WSI.size())
-        # print()
+        print('slide_id:', slide_name)  # debug slide_name
+        print(data_WSI.size())
+        print()
 
         with torch.no_grad():
             result, result_omic, result_path = model(x_path=data_WSI, x_omic1=data_omic1, x_omic2=data_omic2, x_omic3=data_omic3, x_omic4=data_omic4, x_omic5=data_omic5, x_omic6=data_omic6)
