@@ -132,14 +132,7 @@ class PGBF_Surv01(nn.Module):
         batch_indices = torch.arange(e_t.size(0)).view(-1, 1, 1).to(topk_index.device)  # 创建批次索引辅助张量 [1, 1, 1]
         Nb_h = e_t[batch_indices, topk_index_expanded, :]  # 使用索引从 e_t 中提取特征向量 neighbors_head [1, num_patch, topk, 256]
         # WiKG 公式 4 为有向边分配嵌入 embedding head_r
-
-        # 减少操作次数，先预计算权重后的 Nb_h 和 e_h
-        weighted_Nb_h = topk_prob.unsqueeze(-1) * Nb_h
-        weighted_e_h = (1 - topk_prob).unsqueeze(-1) * e_h.unsqueeze(2)
-        # 直接累加得到 eh_r
-        eh_r = weighted_Nb_h + weighted_e_h
-
-        # eh_r = torch.mul(topk_prob.unsqueeze(-1), Nb_h) + torch.matmul((1 - topk_prob).unsqueeze(-1), e_h.unsqueeze(2))  # [1, num_patch, topk, 256]
+        eh_r = torch.mul(topk_prob.unsqueeze(-1), Nb_h) + torch.matmul((1 - topk_prob).unsqueeze(-1), e_h.unsqueeze(2))  # [1, num_patch, topk, 256]
         # WiKG 公式 6 计算 加权因子
         e_h_expand = e_h.unsqueeze(2).expand(-1, -1, self.topk, -1)  # [1, num_patch, topk, 256]
         gate = torch.tanh(e_h_expand + eh_r)  # [1, num_patch, topk, 256]
