@@ -23,7 +23,8 @@ class PGBF_Surv01(nn.Module):
         self.path_decoder = 0  # args.path_decoder  # [0, 1, 2, 3]
         self.omic_decoder = 0  # args.omic_decoder  # [0, 1, 2]
         self.fusion_layer = 2  # args.fusion_layer  # [0, 1]
-        topk = 30  # args.topk  # [6, 12, 18, 24, 30]
+        # topk = 30  # args.topk  # [6, 12, 18, 24, 30]
+        topk = args.topk  # [6, 12, 18, 24, 30]
         # ot_reg = args.ot_reg  # [0.05, 0.1]
         # ot_tau = 0.5  #
         dropout = 0.4  # args.dropout  # [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
@@ -68,9 +69,7 @@ class PGBF_Surv01(nn.Module):
         self.readout = GlobalAttention(att_net)
 
         ### coattn graph & omic
-        if self.coattn_model == "MOTCat":
-            self.coattn = OT_Attn_assem(impl=ot_impl, ot_reg=ot_reg, ot_tau=ot_tau)  # MOTCat
-        elif self.coattn_model == "CMTA":
+        if self.coattn_model == "CMTA":
             self.P_in_G_Att = MultiheadAttention_CMTA(embed_dim=256, num_heads=8)  # P->G Attention
             self.G_in_P_Att = MultiheadAttention_CMTA(embed_dim=256, num_heads=8)  # G->P Attention
 
@@ -155,12 +154,7 @@ class PGBF_Surv01(nn.Module):
         path_coattn = patch_token_pathology_encoder.transpose(1, 0)
         # print("omic_coattn.size():",omic_coattn.size())
         # print("path_coattn.size():",path_coattn.size())
-        if self.coattn_model == "MOTCat":
-            Att, _ = self.coattn(path_coattn, omic_coattn)  # [1, 1, 6, num_patch]
-            # print('Attn.size():', Att.size())
-            genomics_in_pathology = torch.mm(Att.squeeze(), patch_token_pathology_encoder.squeeze())  # [1, 6, num_patch]
-            # print('genomics_in_pathology.size():', genomics_in_pathology.size())
-        elif self.coattn_model == "CMTA":
+        if self.coattn_model == "CMTA":
             pathology_in_genomics, Att = self.P_in_G_Att(path_coattn, omic_coattn, omic_coattn)  # [num_patch, 1, 256]
             # print('pathology_in_genomics.size():', pathology_in_genomics.size())
             # print('Attn.size():', Att.size())
