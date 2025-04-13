@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch_geometric.nn import GATv2Conv
-from timm.models.layers import DropPath, trunc_normal_
+from timm.layers import DropPath, trunc_normal_
 
 from models.model_utils import SNN_Block, Attn_Net_Gated
 

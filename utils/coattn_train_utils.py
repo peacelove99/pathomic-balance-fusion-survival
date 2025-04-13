@@ -58,7 +58,7 @@ def train_loop(epoch, data_loader, model, criterion, optimizer, args, writer):
 
         loss.backward()
 
-        if 5 <= epoch <= 20:
+        if 10 <= epoch <= 20:
             logits_omic = (torch.mm(result_omic['encoder'].detach(), torch.transpose(model.classifier.weight, 0, 1)) + model.classifier.bias)
             hazards_omic = torch.sigmoid(logits_omic)
             S_omic = torch.cumprod(1 - hazards_omic, dim=1)

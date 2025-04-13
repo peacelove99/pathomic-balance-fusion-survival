@@ -3,7 +3,7 @@ from torch import linalg as LA
 import torch.nn.functional as F
 import torch.nn as nn
 
-import ot
+# import ot
 
 from models.model_utils import *
 from torch_geometric.nn import GlobalAttention

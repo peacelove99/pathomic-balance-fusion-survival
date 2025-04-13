@@ -4,7 +4,7 @@ import sys
 
 import pandas as pd
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import numpy as np
 import torch
 from timeit import default_timer as timer
@@ -23,7 +23,8 @@ def parse():
                         default=2024, help='Random seed for reproducible experiment (default: 1)')
 
     parser.add_argument('--task', type=str,
-                        default='tcga_luad', help='Which cancer type within ./splits/<which_splits> to use for training. Used synonymously for "task" (Default: tcga_luad)')
+                        # default='tcga_luad', help='Which cancer type within ./splits/<which_splits> to use for training. Used synonymously for "task" (Default: tcga_luad)')
+                        default='tcga_brca', help='Which cancer type within ./splits/<which_splits> to use for training. Used synonymously for "task" (Default: tcga_brca)')
 
     parser.add_argument('--results_dir0', type=str,
                         default='./results', help='Results directory (Default: ./results)')
@@ -48,8 +49,10 @@ def parse():
                         default=True, help='Use genomic features as signature embeddings.')
 
     parser.add_argument('--data_root_dir', type=str,
-                        default='/home/cvnlp/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        # default='/home/cvnlp/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
                         # default='/media/lenovo/D2B96B35B0D939DD/WSI_DATA/TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        # default='D:\WSI_DATA\TCGA_LUAD_feature', help='Data directory to WSI features (extracted via CLAM')
+                        default='D:\WSI_DATA\TCGA_BRCA_feature_ResNet', help='Data directory to WSI features (extracted via CLAM')
 
     parser.add_argument('--log_data', action='store_true',
                         default=False, help='Log data using tensorboard')
@@ -91,7 +94,7 @@ def parse():
                         default=0, help='start_epoch.')
 
     parser.add_argument('--max_epochs', type=int,
-                        default=10, help='Maximum number of epochs to train (default: 20)')
+                        default=20, help='Maximum number of epochs to train (default: 20)')
 
     # parser.add_argument('--lambda_reg', type=float,
     #                     default=1e-4, help='L1-Regularization Strength (Default 1e-4)')
@@ -282,15 +285,14 @@ if __name__ == "__main__":
     #                                             continue
     #
     #                                         result = main(args)
-    #                                         if result > best_rest:
+    #                                          if result > best_rest:
     #                                             best_rest = result
     #                                             best_set = experiment_set
     # print('best_rest', best_rest)
     # print('best_set', best_set)
-
-    for g in [6, 12, 18, 24, 30]:
+    for g in [30, 24, 18, 12, 6, 3, 2, 1]:
         args.topk = g
-        experiment_set = "pgbf01_CMTA_WIKG" + g + "_OGM"
+        experiment_set = "pgbf01_BRCA_0_0_2_WiKG{0}_OGM".format(g)
         args.loss = "nll_surv_l1"
         args.results_dir = os.path.join(args.results_dir0, experiment_set)
         if not os.path.isdir(args.results_dir):
